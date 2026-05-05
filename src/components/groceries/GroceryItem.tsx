@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useToggleGrocery, useDeleteGrocery } from '@/hooks/useGroceries'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import type { GroceryItem as GroceryItemType } from '@/types'
@@ -9,9 +10,21 @@ interface Props {
   showAisle?: boolean
 }
 
+function formatAddedAt(iso: string): string {
+  const date = new Date(iso)
+  return date.toLocaleString('sv-SE', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
   const toggle = useToggleGrocery()
   const deleteItem = useDeleteGrocery()
+  const [showDate, setShowDate] = useState(false)
 
   return (
     <div
@@ -51,6 +64,13 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           {showAisle && aisleNumber !== undefined && (
             <span className="text-xs text-gray-400">Gång {aisleNumber}</span>
           )}
+          <button
+            onClick={() => setShowDate(v => !v)}
+            className="text-xs text-gray-300 hover:text-gray-400 transition-colors"
+            aria-label="Visa/dölj tidpunkt"
+          >
+            {showDate ? formatAddedAt(item.created_at) : '···'}
+          </button>
         </div>
       </div>
 
