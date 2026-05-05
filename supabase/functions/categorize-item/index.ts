@@ -1,12 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const CATEGORIES = [
-  "Produce", "Dairy & Eggs", "Meat & Seafood", "Bakery",
-  "Frozen", "Pantry", "Snacks", "Beverages",
-  "Household", "Personal Care", "Baby", "Pet", "Other",
-]
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -46,6 +40,34 @@ serve(async (req: Request) => {
     })
   }
 
+  // Determine the user's household and available categories
+  const { data: memberRows, error: memberErr } = await supabase
+    .from("household_members")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .eq("status", "accepted")
+    .limit(1)
+  if (memberErr || !memberRows?.[0]?.household_id) {
+    return new Response(JSON.stringify({ category: "Other" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+
+  const householdId = memberRows[0].household_id as string
+
+  const { data: categoryRows } = await supabase
+    .from("household_categories")
+    .select("name, sort_order")
+    .eq("household_id", householdId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+
+  const categories = (categoryRows ?? [])
+    .map(r => (r as { name?: string }).name)
+    .filter((v): v is string => !!v && typeof v === "string")
+
+  if (!categories.includes("Other")) categories.push("Other")
+
   const openaiKey = Deno.env.get("OPENAI_API_KEY")
   if (!openaiKey) {
     return new Response(JSON.stringify({ category: "Other" }), {
@@ -65,7 +87,7 @@ serve(async (req: Request) => {
         messages: [
           {
             role: "system",
-            content: `You categorize grocery items. Reply with ONLY one category from this exact list, nothing else:\n${CATEGORIES.join(", ")}`,
+            content: `You categorize grocery items. Reply with ONLY one category from this exact list, nothing else:\n${categories.join(", ")}`,
           },
           { role: "user", content: itemName },
         ],
@@ -76,7 +98,7 @@ serve(async (req: Request) => {
 
     const data = await response.json()
     const raw = (data.choices?.[0]?.message?.content ?? "Other").trim()
-    const category = CATEGORIES.includes(raw) ? raw : "Other"
+    const category = categories.includes(raw) ? raw : "Other"
 
     return new Response(JSON.stringify({ category }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
