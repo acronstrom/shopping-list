@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useGroceries, useClearChecked } from '@/hooks/useGroceries'
-import { useAisleOrders } from '@/hooks/useAisleOrders'
+import { useStoreCategoryOrders } from '@/hooks/useCategories'
 import { useUI } from '@/contexts/UIContext'
 import { GroceryItem } from './GroceryItem'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,16 +11,16 @@ import type { GroceryItem as GroceryItemType } from '@/types'
 export function GroceryList() {
   const { data: items = [], isLoading } = useGroceries()
   const { selectedStoreId } = useUI()
-  const { data: aisleOrders = [] } = useAisleOrders(selectedStoreId)
+  const { data: storeCategoryOrders = [] } = useStoreCategoryOrders(selectedStoreId)
   const clearChecked = useClearChecked()
 
-  const aisleMap = useMemo(() => {
+  const categoryPosition = useMemo(() => {
     const map = new Map<string, number>()
-    for (const ao of aisleOrders) {
-      map.set(ao.item_name, ao.aisle)
+    for (const row of storeCategoryOrders) {
+      map.set(row.category_name, row.position)
     }
     return map
-  }, [aisleOrders])
+  }, [storeCategoryOrders])
 
   const sortedItems = useMemo(() => {
     if (!selectedStoreId) {
@@ -33,11 +33,11 @@ export function GroceryList() {
     }
     return [...items].sort((a, b) => {
       if (a.is_checked !== b.is_checked) return a.is_checked ? 1 : -1
-      const aisleA = aisleMap.get(a.name.toLowerCase().trim()) ?? 999
-      const aisleB = aisleMap.get(b.name.toLowerCase().trim()) ?? 999
-      return aisleA - aisleB || a.name.localeCompare(b.name)
+      const posA = categoryPosition.get(a.category) ?? 999
+      const posB = categoryPosition.get(b.category) ?? 999
+      return posA - posB || a.name.localeCompare(b.name)
     })
-  }, [items, selectedStoreId, aisleMap])
+  }, [items, selectedStoreId, categoryPosition])
 
   const checkedItems = items.filter(i => i.is_checked)
 
@@ -101,8 +101,7 @@ export function GroceryList() {
               <GroceryItem
                 key={item.id}
                 item={item}
-                aisleNumber={aisleMap.get(item.name.toLowerCase().trim())}
-                showAisle={!!selectedStoreId}
+                showAisle={false}
               />
             ))
         }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useDeleteStore } from '@/hooks/useStores'
-import { AisleOrderEditor } from './AisleOrderEditor'
+import { StoreCategoryOrderEditor } from './StoreCategoryOrderEditor'
 import type { Store } from '@/types'
 
 interface Props {
@@ -47,9 +47,9 @@ export function StoreCard({ store }: Props) {
       {expanded && (
         <div className="border-t border-gray-50 px-4 pb-4 pt-2">
           <p className="text-xs text-gray-400 mb-3">
-            Tilldela ett gångnummer till varje vara. Varor utan nummer sorteras sist.
+            Välj i vilken ordning kategorierna ska visas/sorteras i den här butiken.
           </p>
-          <AisleOrderEditor storeId={store.id} />
+          <StoreCategoryOrderEditor storeId={store.id} />
         </div>
       )}
     </div>

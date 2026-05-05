@@ -156,6 +156,52 @@ export interface Database {
         }
         Update: never
       }
+      household_categories: {
+        Row: {
+          id: string
+          household_id: string
+          name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          name: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
+        }
+      }
+      store_category_orders: {
+        Row: {
+          id: string
+          store_id: string
+          category_name: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          category_name: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          category_name?: string
+          position?: number
+          updated_at?: string
+        }
+      }
     }
   }
 }
