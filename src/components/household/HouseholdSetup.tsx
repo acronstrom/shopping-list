@@ -18,7 +18,7 @@ export function HouseholdSetup() {
     try {
       await createHousehold.mutateAsync(name)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create household')
+      setError(err instanceof Error ? err.message : 'Det gick inte att skapa hushållet')
     }
   }
 
@@ -28,7 +28,7 @@ export function HouseholdSetup() {
     try {
       await joinHousehold.mutateAsync()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pending invite found for your email')
+      setError(err instanceof Error ? err.message : 'Ingen väntande inbjudan hittades för din e-post')
     }
   }
 
@@ -43,24 +43,24 @@ export function HouseholdSetup() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4 shadow-lg">
             <span className="text-3xl">🏠</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Set up your household</h1>
-          <p className="text-sm text-gray-500 mt-1">Create a new household or join an existing one</p>
+          <h1 className="text-2xl font-bold text-gray-900">Konfigurera ditt hushåll</h1>
+          <p className="text-sm text-gray-500 mt-1">Skapa ett nytt hushåll eller gå med i ett befintligt</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           {mode === 'choose' && (
             <div className="flex flex-col gap-3">
               <Button size="lg" onClick={() => setMode('create')} className="w-full">
-                Create a new household
+                Skapa ett nytt hushåll
               </Button>
               <Button size="lg" variant="secondary" onClick={() => setMode('join')} className="w-full">
-                Join with an invite
+                Gå med via inbjudan
               </Button>
               <button
                 onClick={handleSignOut}
                 className="text-sm text-gray-400 hover:text-gray-600 mt-2 transition-colors"
               >
-                Sign out
+                Logga ut
               </button>
             </div>
           )}
@@ -72,18 +72,18 @@ export function HouseholdSetup() {
                 onClick={() => { setMode('choose'); setError('') }}
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 -mb-1"
               >
-                ← Back
+                ← Tillbaka
               </button>
               <Input
-                label="Household name"
+                label="Hushållsnamn"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="e.g. Smith Family"
+                placeholder="t.ex. Familjen Svensson"
                 required
               />
               {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
               <Button type="submit" loading={createHousehold.isPending} size="lg" className="w-full">
-                Create household
+                Skapa hushåll
               </Button>
             </form>
           )}
@@ -95,14 +95,14 @@ export function HouseholdSetup() {
                 onClick={() => { setMode('choose'); setError('') }}
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 -mb-1"
               >
-                ← Back
+                ← Tillbaka
               </button>
               <p className="text-sm text-gray-600">
-                Someone must invite you by email first. We'll look for a pending invite for your account.
+                Någon måste bjuda in dig via e-post först. Vi letar efter en väntande inbjudan till ditt konto.
               </p>
               {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
               <Button type="submit" loading={joinHousehold.isPending} size="lg" className="w-full">
-                Find my invite
+                Hitta min inbjudan
               </Button>
             </form>
           )}

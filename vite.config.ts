@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Grocery List',
-        short_name: 'GroceryList',
-        description: 'Shared household grocery list with AI categorization',
+        name: 'Inköpslista',
+        short_name: 'Inköpslista',
+        description: 'Delad inköpslista för hushållet med AI-kategorisering',
         theme_color: '#16a34a',
         background_color: '#ffffff',
         display: 'standalone',

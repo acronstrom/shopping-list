@@ -9,7 +9,7 @@ export function SortControls() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Sort by store:</span>
+      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Sortera efter butik:</span>
       <div className="flex gap-1.5 flex-wrap">
         <button
           onClick={() => setSelectedStoreId(null)}
@@ -19,7 +19,7 @@ export function SortControls() {
               : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
           }`}
         >
-          Category
+          Kategori
         </button>
         {stores.map(store => (
           <button

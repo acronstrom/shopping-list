@@ -28,7 +28,7 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
             ? 'bg-green-600 border-green-600 text-white'
             : 'border-gray-300 hover:border-green-400'
         )}
-        aria-label={item.is_checked ? 'Uncheck' : 'Check'}
+        aria-label={item.is_checked ? 'Avmarkera' : 'Markera'}
       >
         {item.is_checked && (
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -49,15 +49,15 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
         <div className="flex items-center gap-2 mt-0.5">
           <CategoryBadge category={item.category} />
           {showAisle && aisleNumber !== undefined && (
-            <span className="text-xs text-gray-400">Aisle {aisleNumber}</span>
+            <span className="text-xs text-gray-400">Gång {aisleNumber}</span>
           )}
         </div>
       </div>
 
       <button
         onClick={() => deleteItem.mutate(item.id)}
-        className="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-red-50"
-        aria-label="Remove item"
+        className="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-red-50"
+        aria-label="Ta bort vara"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

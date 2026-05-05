@@ -23,45 +23,45 @@ export function StoresPage() {
       setName('')
       setOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add store')
+      setError(err instanceof Error ? err.message : 'Det gick inte att lägga till butik')
     }
   }
 
   return (
     <div>
-      <Header title="Stores" action={{ label: '+ Add store', onClick: () => setOpen(true) }} />
+      <Header title="Butiker" action={{ label: '+ Lägg till butik', onClick: () => setOpen(true) }} />
       <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
         ) : stores.length === 0 ? (
           <EmptyState
             icon="🏪"
-            title="No stores yet"
-            description="Add a store to assign aisle numbers to items and sort your list while shopping."
-            action={{ label: 'Add your first store', onClick: () => setOpen(true) }}
+            title="Inga butiker än"
+            description="Lägg till en butik för att tilldela gångnummer och sortera din lista under handlingen."
+            action={{ label: 'Lägg till din första butik', onClick: () => setOpen(true) }}
           />
         ) : (
           stores.map(store => <StoreCard key={store.id} store={store} />)
         )}
       </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); setError('') }} title="Add store">
+      <Modal open={open} onClose={() => { setOpen(false); setError('') }} title="Lägg till butik">
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
           <Input
-            label="Store name"
+            label="Butiksnamn"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. ICA Maxi"
+            placeholder="t.ex. ICA Maxi"
             required
             autoFocus
           />
           {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)} className="flex-1">
-              Cancel
+              Avbryt
             </Button>
             <Button type="submit" loading={addStore.isPending} className="flex-1">
-              Add store
+              Lägg till
             </Button>
           </div>
         </form>

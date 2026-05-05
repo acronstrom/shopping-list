@@ -28,7 +28,7 @@ export function AisleOrderEditor({ storeId }: Props) {
   if (uniqueNames.length === 0) {
     return (
       <p className="text-sm text-gray-400 py-4 text-center">
-        Add items to your list first, then assign aisle numbers here.
+        Lägg till varor i din lista först, tilldela sedan gångnummer här.
       </p>
     )
   }
@@ -46,7 +46,7 @@ export function AisleOrderEditor({ storeId }: Props) {
             onChange={e => handleChange(itemName, e.target.value)}
             placeholder="–"
             className="w-16 text-center rounded-lg border border-gray-200 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-            aria-label={`Aisle for ${itemName}`}
+            aria-label={`Gång för ${itemName}`}
           />
         </div>
       ))}

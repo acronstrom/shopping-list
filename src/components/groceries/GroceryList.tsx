@@ -5,6 +5,7 @@ import { useUI } from '@/contexts/UIContext'
 import { GroceryItem } from './GroceryItem'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
+import { getCategoryLabelSv } from '@/lib/constants'
 import type { GroceryItem as GroceryItemType } from '@/types'
 
 export function GroceryList() {
@@ -25,7 +26,9 @@ export function GroceryList() {
     if (!selectedStoreId) {
       return [...items].sort((a, b) => {
         if (a.is_checked !== b.is_checked) return a.is_checked ? 1 : -1
-        return a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+        const aLabel = getCategoryLabelSv(a.category)
+        const bLabel = getCategoryLabelSv(b.category)
+        return aLabel.localeCompare(bLabel, 'sv') || a.name.localeCompare(b.name)
       })
     }
     return [...items].sort((a, b) => {
@@ -50,8 +53,8 @@ export function GroceryList() {
     return (
       <EmptyState
         icon="🛒"
-        title="Your list is empty"
-        description="Add items above and they'll appear here, sorted by category or store aisle."
+        title="Din lista är tom"
+        description="Lägg till varor ovan så visas de här, sorterade efter kategori eller butiksled."
       />
     )
   }
@@ -65,14 +68,14 @@ export function GroceryList() {
       {checkedItems.length > 0 && (
         <div className="flex items-center justify-between px-4 py-2">
           <span className="text-xs text-gray-400 font-medium">
-            {checkedItems.length} item{checkedItems.length !== 1 ? 's' : ''} checked
+            {checkedItems.length} {checkedItems.length === 1 ? 'vara markerad' : 'varor markerade'}
           </span>
           <button
             onClick={() => clearChecked.mutate(checkedItems)}
             disabled={clearChecked.isPending}
             className="text-xs font-medium text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
           >
-            Clear checked
+            Rensa markerade
           </button>
         </div>
       )}
@@ -83,7 +86,7 @@ export function GroceryList() {
               <div key={category}>
                 <div className="px-4 py-2 bg-gray-50">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    {category}
+                    {getCategoryLabelSv(category)}
                   </span>
                 </div>
                 {catItems.map(item => (

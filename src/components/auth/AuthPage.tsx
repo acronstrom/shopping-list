@@ -23,10 +23,10 @@ export function AuthPage() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
-        setMessage('Check your email to confirm your account.')
+        setMessage('Kontrollera din e-post för att bekräfta ditt konto.')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : 'Något gick fel')
     } finally {
       setLoading(false)
     }
@@ -39,8 +39,8 @@ export function AuthPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4 shadow-lg">
             <span className="text-3xl">🛒</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Grocery List</h1>
-          <p className="text-sm text-gray-500 mt-1">Shared shopping for your household</p>
+          <h1 className="text-2xl font-bold text-gray-900">Inköpslista</h1>
+          <p className="text-sm text-gray-500 mt-1">Delad inköpslista för ditt hushåll</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -55,23 +55,23 @@ export function AuthPage() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {m === 'signin' ? 'Sign in' : 'Create account'}
+                {m === 'signin' ? 'Logga in' : 'Skapa konto'}
               </button>
             ))}
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
-              label="Email"
+              label="E-post"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="du@exempel.se"
               required
               autoComplete="email"
             />
             <Input
-              label="Password"
+              label="Lösenord"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -89,7 +89,7 @@ export function AuthPage() {
             )}
 
             <Button type="submit" loading={loading} size="lg" className="w-full mt-1">
-              {mode === 'signin' ? 'Sign in' : 'Create account'}
+              {mode === 'signin' ? 'Logga in' : 'Skapa konto'}
             </Button>
           </form>
         </div>

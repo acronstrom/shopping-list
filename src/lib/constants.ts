@@ -1,3 +1,10 @@
+export const NAV_ITEMS = [
+  { to: '/', label: 'Lista', icon: '🛒' },
+  { to: '/stores', label: 'Butiker', icon: '🏪' },
+  { to: '/history', label: 'Historik', icon: '📋' },
+  { to: '/settings', label: 'Inställningar', icon: '⚙️' },
+] as const
+
 export const CATEGORIES = [
   'Produce',
   'Dairy & Eggs',
@@ -15,6 +22,26 @@ export const CATEGORIES = [
 ] as const
 
 export type Category = (typeof CATEGORIES)[number]
+
+export const CATEGORY_LABELS_SV: Record<string, string> = {
+  'Produce': 'Frukt & Grönt',
+  'Dairy & Eggs': 'Mejeri & Ägg',
+  'Meat & Seafood': 'Kött & Fisk',
+  'Bakery': 'Bageri',
+  'Frozen': 'Fryst',
+  'Pantry': 'Skafferi',
+  'Snacks': 'Snacks',
+  'Beverages': 'Drycker',
+  'Household': 'Hushåll',
+  'Personal Care': 'Hygien',
+  'Baby': 'Baby',
+  'Pet': 'Husdjur',
+  'Other': 'Övrigt',
+}
+
+export function getCategoryLabelSv(category: string) {
+  return CATEGORY_LABELS_SV[category] ?? category
+}
 
 export const CATEGORY_COLORS: Record<string, string> = {
   'Produce': 'bg-green-100 text-green-800',

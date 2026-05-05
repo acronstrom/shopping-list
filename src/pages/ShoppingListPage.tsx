@@ -7,7 +7,7 @@ import { SuggestionBar } from '@/components/groceries/SuggestionBar'
 export function ShoppingListPage() {
   return (
     <div>
-      <Header title="Grocery List" />
+      <Header title="Inköpslista" />
       <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
         <SortControls />
         <SuggestionBar />

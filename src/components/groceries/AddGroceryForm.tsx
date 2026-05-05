@@ -24,14 +24,14 @@ export function AddGroceryForm() {
           ref={inputRef}
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Add an item…"
+          placeholder="Lägg till en vara…"
           className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors"
           autoComplete="off"
         />
         <input
           value={quantity}
           onChange={e => setQuantity(e.target.value)}
-          placeholder="Qty"
+          placeholder="Antal"
           className="w-20 rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors"
           autoComplete="off"
         />
@@ -39,7 +39,7 @@ export function AddGroceryForm() {
           type="submit"
           disabled={!name.trim() || addGrocery.isPending}
           className="w-12 h-12 flex items-center justify-center bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-xl transition-colors disabled:opacity-40"
-          aria-label="Add item"
+          aria-label="Lägg till vara"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

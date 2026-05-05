@@ -1,18 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-
-const navItems = [
-  { to: '/', label: 'List', icon: '🛒' },
-  { to: '/stores', label: 'Stores', icon: '🏪' },
-  { to: '/history', label: 'History', icon: '📋' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
-]
+import { NAV_ITEMS } from '@/lib/constants'
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-10 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-10 safe-area-bottom md:hidden">
       <div className="max-w-2xl mx-auto flex">
-        {navItems.map(({ to, label, icon }) => (
+        {NAV_ITEMS.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
