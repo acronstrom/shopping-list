@@ -34,7 +34,7 @@ export function useAddGrocery() {
           id: tempId,
           household_id: householdId!,
           name: name.trim(),
-          category: 'Other',
+          category: 'Övrigt',
           quantity: quantity?.trim() || null,
           added_by: user!.id,
         }])
@@ -46,7 +46,7 @@ export function useAddGrocery() {
       supabase.functions.invoke('categorize-item', { body: { itemName: name.trim() } })
         .then(({ data: catData }) => {
           const category = (catData as { category?: string })?.category
-          if (category && category !== 'Other') {
+          if (category && category !== 'Övrigt') {
             supabase
               .from('grocery_items')
               .update({ category })
@@ -66,7 +66,7 @@ export function useAddGrocery() {
         id: `temp-${Date.now()}`,
         household_id: householdId!,
         name: name.trim(),
-        category: 'Other',
+        category: 'Övrigt',
         quantity: quantity?.trim() || null,
         note: null,
         is_checked: false,

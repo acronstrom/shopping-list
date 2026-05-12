@@ -35,7 +35,7 @@ serve(async (req: Request) => {
 
   const { itemName } = await req.json()
   if (!itemName) {
-    return new Response(JSON.stringify({ category: "Other" }), {
+    return new Response(JSON.stringify({ category: "Övrigt" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
@@ -48,7 +48,7 @@ serve(async (req: Request) => {
     .eq("status", "accepted")
     .limit(1)
   if (memberErr || !memberRows?.[0]?.household_id) {
-    return new Response(JSON.stringify({ category: "Other" }), {
+    return new Response(JSON.stringify({ category: "Övrigt" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
@@ -66,11 +66,11 @@ serve(async (req: Request) => {
     .map(r => (r as { name?: string }).name)
     .filter((v): v is string => !!v && typeof v === "string")
 
-  if (!categories.includes("Other")) categories.push("Other")
+  if (!categories.includes("Övrigt")) categories.push("Övrigt")
 
   const openaiKey = Deno.env.get("OPENAI_API_KEY")
   if (!openaiKey) {
-    return new Response(JSON.stringify({ category: "Other" }), {
+    return new Response(JSON.stringify({ category: "Övrigt" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
@@ -97,14 +97,14 @@ serve(async (req: Request) => {
     })
 
     const data = await response.json()
-    const raw = (data.choices?.[0]?.message?.content ?? "Other").trim()
-    const category = categories.includes(raw) ? raw : "Other"
+    const raw = (data.choices?.[0]?.message?.content ?? "Övrigt").trim()
+    const category = categories.includes(raw) ? raw : "Övrigt"
 
     return new Response(JSON.stringify({ category }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch {
-    return new Response(JSON.stringify({ category: "Other" }), {
+    return new Response(JSON.stringify({ category: "Övrigt" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }

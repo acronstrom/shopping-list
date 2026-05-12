@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { getCategoryLabelSv } from '@/lib/constants'
 import { useAddHouseholdCategory, useHouseholdCategories, useSetStoreCategoryOrder, useStoreCategoryOrders } from '@/hooks/useCategories'
 
 interface Props {
@@ -71,7 +70,7 @@ export function StoreCategoryOrderEditor({ storeId }: Props) {
       <div className="divide-y divide-gray-50">
       {orderedCategoryNames.map((name, idx) => (
         <div key={name} className="flex items-center justify-between py-2.5 px-1 gap-2">
-          <span className="text-sm text-gray-700">{getCategoryLabelSv(name)}</span>
+          <span className="text-sm text-gray-700">{name}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
