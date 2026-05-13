@@ -87,7 +87,7 @@ serve(async (req: Request) => {
         messages: [
           {
             role: "system",
-            content: `You categorize grocery items. Reply with ONLY one category from this exact list, nothing else:\n${categories.join(", ")}`,
+            content: `Du kategoriserar matvaror på svenska. Användaren skickar ett varunamn på svenska (t.ex. "mjölk", "tomater", "leverpastej"). Svara med ENDAST en kategori, exakt som den står i listan nedan, utan extra text, citattecken eller förklaring. Om varan inte tydligt passar i någon kategori, svara "Övrigt".\n\nTillåtna kategorier:\n${categories.join(", ")}`,
           },
           { role: "user", content: itemName },
         ],
