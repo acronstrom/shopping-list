@@ -114,7 +114,7 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           <>
             <span
               key={`burst-${celebrate}`}
-              className="absolute inset-0 rounded-full bg-emerald-400/40 animate-burst"
+              className="pointer-events-none absolute inset-0 rounded-full bg-emerald-400/40 animate-burst"
               aria-hidden
             />
             <span
