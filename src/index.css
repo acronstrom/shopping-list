@@ -8,6 +8,22 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Prevent iOS Safari from zooming in on input focus.
+   Triggered when an input/textarea/select has font-size < 16px. */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: inherit;
+  }
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

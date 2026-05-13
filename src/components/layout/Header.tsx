@@ -53,22 +53,25 @@ export function Header({ title, action }: HeaderProps) {
 
 function BrandMark() {
   return (
-    <div className="relative w-10 h-10 flex-shrink-0">
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-300 via-emerald-500 to-emerald-600 shadow-[0_8px_20px_-6px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]" />
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/35 to-transparent opacity-70 mix-blend-screen" />
+    <div className="relative w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_6px_16px_-6px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]">
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl bg-gradient-to-b from-white/25 to-transparent"
+        aria-hidden
+      />
       <svg
-        className="relative w-6 h-6 m-auto inset-0 absolute text-white drop-shadow-[0_1px_1px_rgba(6,78,59,0.45)]"
+        className="relative w-[22px] h-[22px] text-white"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden
       >
-        <path d="M3 4h2.2l1.2 2M7.4 8h13.1l-1.7 7a2 2 0 0 1-1.95 1.55H10.1A2 2 0 0 1 8.16 15L6.4 6 5.2 4" />
-        <circle cx="10" cy="20" r="1.4" />
-        <circle cx="17" cy="20" r="1.4" />
+        <path d="M3 3.5h2l2.5 11.3a1.8 1.8 0 0 0 1.76 1.4h8.96a1.8 1.8 0 0 0 1.75-1.39L21.5 8H6.3" />
+        <path d="M9.8 11.2l1.7 1.7 3.5-3.7" />
+        <circle cx="9.5" cy="20" r="1.2" />
+        <circle cx="17.5" cy="20" r="1.2" />
       </svg>
     </div>
   )
