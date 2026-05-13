@@ -13,10 +13,8 @@ export function Header({ title, action }: HeaderProps) {
   return (
     <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 py-3 sticky top-0 z-10">
       <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_6px_16px_-4px_rgba(16,185,129,0.5)]">
-            <span className="text-base">🛒</span>
-          </div>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <BrandMark />
           <h1 className="text-lg font-semibold text-gray-900 tracking-tight truncate">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -50,5 +48,28 @@ export function Header({ title, action }: HeaderProps) {
         </div>
       </div>
     </header>
+  )
+}
+
+function BrandMark() {
+  return (
+    <div className="relative w-10 h-10 flex-shrink-0">
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-300 via-emerald-500 to-emerald-600 shadow-[0_8px_20px_-6px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]" />
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/35 to-transparent opacity-70 mix-blend-screen" />
+      <svg
+        className="relative w-6 h-6 m-auto inset-0 absolute text-white drop-shadow-[0_1px_1px_rgba(6,78,59,0.45)]"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M3 4h2.2l1.2 2M7.4 8h13.1l-1.7 7a2 2 0 0 1-1.95 1.55H10.1A2 2 0 0 1 8.16 15L6.4 6 5.2 4" />
+        <circle cx="10" cy="20" r="1.4" />
+        <circle cx="17" cy="20" r="1.4" />
+      </svg>
+    </div>
   )
 }
