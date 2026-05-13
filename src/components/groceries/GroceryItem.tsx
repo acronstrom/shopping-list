@@ -3,6 +3,7 @@ import { useToggleGrocery, useDeleteGrocery } from '@/hooks/useGroceries'
 import { useUI } from '@/contexts/UIContext'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { playCompleteSound, playUncheckSound } from '@/lib/feedback'
+import { capitalizeFirst } from '@/lib/text'
 import type { GroceryItem as GroceryItemType } from '@/types'
 import { clsx } from 'clsx'
 
@@ -153,7 +154,7 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
               item.is_checked && 'line-through text-gray-400'
             )}
           >
-            {item.name}
+            {capitalizeFirst(item.name)}
           </span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">

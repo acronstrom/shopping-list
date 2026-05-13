@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { capitalizeFirst } from '@/lib/text'
 import type { GroceryItem } from '@/types'
 
 export function useGroceries() {
@@ -27,13 +28,14 @@ export function useAddGrocery() {
   return useMutation({
     mutationFn: async ({ name, quantity }: { name: string; quantity?: string }) => {
       const tempId = crypto.randomUUID()
+      const cleanName = capitalizeFirst(name.trim())
 
       const { data, error } = await supabase
         .from('grocery_items')
         .insert([{
           id: tempId,
           household_id: householdId!,
-          name: name.trim(),
+          name: cleanName,
           category: 'Övrigt',
           quantity: quantity?.trim() || null,
           added_by: user!.id,
@@ -43,7 +45,7 @@ export function useAddGrocery() {
       if (error) throw error
 
       // Fire-and-forget category assignment
-      supabase.functions.invoke('categorize-item', { body: { itemName: name.trim() } })
+      supabase.functions.invoke('categorize-item', { body: { itemName: cleanName } })
         .then(({ data: catData }) => {
           const category = (catData as { category?: string })?.category
           if (category && category !== 'Övrigt') {
@@ -65,7 +67,7 @@ export function useAddGrocery() {
       const optimistic: GroceryItem = {
         id: `temp-${Date.now()}`,
         household_id: householdId!,
-        name: name.trim(),
+        name: capitalizeFirst(name.trim()),
         category: 'Övrigt',
         quantity: quantity?.trim() || null,
         note: null,

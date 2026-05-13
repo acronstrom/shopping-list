@@ -87,7 +87,29 @@ export function useSetStoreCategoryOrder() {
         .upsert(rows, { onConflict: 'store_id,category_name' })
       if (error) throw error
     },
-    onSuccess: (_data, { storeId }) => {
+    onMutate: async ({ storeId, orderedCategoryNames }) => {
+      await queryClient.cancelQueries({ queryKey: ['store-category-orders', storeId] })
+      const prev = queryClient.getQueryData<StoreCategoryOrder[]>(['store-category-orders', storeId])
+      const byName = new Map((prev ?? []).map(r => [r.category_name, r]))
+      const optimistic: StoreCategoryOrder[] = orderedCategoryNames.map((name, idx) => {
+        const existing = byName.get(name)
+        return existing
+          ? { ...existing, position: idx }
+          : {
+              id: `tmp-${storeId}-${name}`,
+              store_id: storeId,
+              category_name: name,
+              position: idx,
+              updated_at: new Date().toISOString(),
+            }
+      })
+      queryClient.setQueryData(['store-category-orders', storeId], optimistic)
+      return { prev }
+    },
+    onError: (_err, { storeId }, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['store-category-orders', storeId], ctx.prev)
+    },
+    onSettled: (_data, _err, { storeId }) => {
       queryClient.invalidateQueries({ queryKey: ['store-category-orders', storeId] })
     },
   })

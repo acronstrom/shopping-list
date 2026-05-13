@@ -1,5 +1,6 @@
 import { useGroceries, useAddGrocery } from '@/hooks/useGroceries'
 import { useSuggestions } from '@/hooks/usePurchaseHistory'
+import { capitalizeFirst } from '@/lib/text'
 
 export function SuggestionBar() {
   const { data: items = [] } = useGroceries()
@@ -21,7 +22,7 @@ export function SuggestionBar() {
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            {s.item_name}
+            {capitalizeFirst(s.item_name)}
           </button>
         ))}
       </div>
