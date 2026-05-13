@@ -37,6 +37,9 @@ export function GroceryList() {
   }, [items, selectedStoreId, categoryPosition])
 
   const checkedItems = items.filter(i => i.is_checked)
+  const checkedCount = checkedItems.length
+  const totalCount = items.length
+  const progress = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
 
   if (isLoading) {
     return (
@@ -56,52 +59,52 @@ export function GroceryList() {
     )
   }
 
-  const grouped = selectedStoreId
-    ? null
-    : groupByCategory(sortedItems)
+  const grouped = selectedStoreId ? null : groupByCategory(sortedItems)
 
   return (
-    <div>
-      {checkedItems.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-xs text-gray-400 font-medium">
-            {checkedItems.length} {checkedItems.length === 1 ? 'vara markerad' : 'varor markerade'}
-          </span>
-          <button
-            onClick={() => clearChecked.mutate(checkedItems)}
-            disabled={clearChecked.isPending}
-            className="text-xs font-medium text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
-          >
-            Rensa markerade
-          </button>
+    <div className="flex flex-col gap-3">
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-gray-200/70 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-500 font-medium tabular-nums whitespace-nowrap">
+              {checkedCount}/{totalCount}
+            </span>
+          </div>
+          {checkedCount > 0 && (
+            <button
+              onClick={() => clearChecked.mutate(checkedItems)}
+              disabled={clearChecked.isPending}
+              className="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              Rensa markerade
+            </button>
+          )}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 overflow-hidden divide-y divide-gray-100/80">
         {grouped
           ? Object.entries(grouped).map(([category, catItems]) => (
               <div key={category}>
-                <div className="px-4 py-2 bg-gray-50">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <div className="px-4 py-2 bg-gray-50/80">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                     {category}
                   </span>
                 </div>
                 {catItems.map(item => (
-                  <GroceryItem
-                    key={item.id}
-                    item={item}
-                  />
+                  <GroceryItem key={item.id} item={item} />
                 ))}
               </div>
             ))
           : sortedItems.map(item => (
-              <GroceryItem
-                key={item.id}
-                item={item}
-                showAisle={false}
-              />
-            ))
-        }
+              <GroceryItem key={item.id} item={item} showAisle={false} />
+            ))}
       </div>
     </div>
   )

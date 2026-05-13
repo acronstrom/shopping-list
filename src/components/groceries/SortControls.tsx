@@ -1,5 +1,6 @@
 import { useStores } from '@/hooks/useStores'
 import { useUI } from '@/contexts/UIContext'
+import { clsx } from 'clsx'
 
 export function SortControls() {
   const { data: stores = [] } = useStores()
@@ -9,32 +10,45 @@ export function SortControls() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Sortera efter butik:</span>
+      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Sortera efter:</span>
       <div className="flex gap-1.5 flex-wrap">
-        <button
-          onClick={() => setSelectedStoreId(null)}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            !selectedStoreId
-              ? 'bg-green-600 text-white'
-              : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
-          }`}
-        >
+        <Pill active={!selectedStoreId} onClick={() => setSelectedStoreId(null)}>
           Kategori
-        </button>
+        </Pill>
         {stores.map(store => (
-          <button
+          <Pill
             key={store.id}
+            active={selectedStoreId === store.id}
             onClick={() => setSelectedStoreId(store.id)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              selectedStoreId === store.id
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
-            }`}
           >
             {store.name}
-          </button>
+          </Pill>
         ))}
       </div>
     </div>
+  )
+}
+
+function Pill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 active:scale-95',
+        active
+          ? 'bg-gray-900 text-white shadow-sm'
+          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+      )}
+    >
+      {children}
+    </button>
   )
 }

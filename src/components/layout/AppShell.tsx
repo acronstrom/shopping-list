@@ -5,7 +5,7 @@ import { useRealtime } from '@/hooks/useRealtime'
 export function AppShell() {
   useRealtime()
   return (
-    <div className="min-h-dvh bg-gray-50 pb-20 md:pb-6">
+    <div className="min-h-dvh pb-24 md:pb-8">
       <Outlet />
       <BottomNav />
     </div>

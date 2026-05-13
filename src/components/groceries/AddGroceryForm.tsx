@@ -1,9 +1,10 @@
 import { useState, type FormEvent, useRef } from 'react'
 import { useAddGrocery } from '@/hooks/useGroceries'
+import { clsx } from 'clsx'
 
 export function AddGroceryForm() {
   const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [focused, setFocused] = useState(false)
   const addGrocery = useAddGrocery()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -12,33 +13,40 @@ export function AddGroceryForm() {
     const trimmed = name.trim()
     if (!trimmed) return
     setName('')
-    setQuantity('')
-    await addGrocery.mutateAsync({ name: trimmed, quantity })
+    await addGrocery.mutateAsync({ name: trimmed })
     inputRef.current?.focus()
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+    <form
+      onSubmit={handleSubmit}
+      className={clsx(
+        'bg-white rounded-2xl border p-2 transition-all duration-200',
+        focused
+          ? 'border-emerald-300 shadow-[0_8px_24px_-12px_rgba(16,185,129,0.35)]'
+          : 'border-gray-200/80 shadow-sm'
+      )}
+    >
       <div className="flex gap-2">
         <input
           ref={inputRef}
           value={name}
           onChange={e => setName(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="Lägg till en vara…"
-          className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors"
-          autoComplete="off"
-        />
-        <input
-          value={quantity}
-          onChange={e => setQuantity(e.target.value)}
-          placeholder="Antal"
-          className="w-20 rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors"
+          className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
           autoComplete="off"
         />
         <button
           type="submit"
           disabled={!name.trim() || addGrocery.isPending}
-          className="w-12 h-12 flex items-center justify-center bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-xl transition-colors disabled:opacity-40"
+          className={clsx(
+            'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200',
+            name.trim()
+              ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-[0_6px_16px_-6px_rgba(16,185,129,0.6)] hover:from-emerald-500 hover:to-emerald-700 active:scale-95'
+              : 'bg-gray-100 text-gray-300'
+          )}
           aria-label="Lägg till vara"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
