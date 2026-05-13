@@ -39,7 +39,7 @@ export function GroceryList() {
   const checkedItems = items.filter(i => i.is_checked)
   const checkedCount = checkedItems.length
   const totalCount = items.length
-  const progress = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
+  const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0
 
   if (isLoading) {
     return (
@@ -65,16 +65,11 @@ export function GroceryList() {
     <div className="flex flex-col gap-3">
       {totalCount > 0 && (
         <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-gray-200/70 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-500 font-medium tabular-nums whitespace-nowrap">
-              {checkedCount}/{totalCount}
-            </span>
+          <div className="flex-1 h-1.5 rounded-full bg-gray-200/70 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
           {checkedCount > 0 && (
             <button

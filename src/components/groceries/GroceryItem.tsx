@@ -155,9 +155,6 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           >
             {item.name}
           </span>
-          {item.quantity && (
-            <span className="text-xs text-gray-400">{item.quantity}</span>
-          )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <CategoryBadge category={item.category} />
