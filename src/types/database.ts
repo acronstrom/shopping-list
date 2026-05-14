@@ -92,6 +92,8 @@ export interface Database {
           unit: string | null
           comparison_price: string | null
           valid_period: string | null
+          category: string | null
+          valid_to: string | null
           position: number
           scraped_at: string
         }
@@ -104,6 +106,8 @@ export interface Database {
           unit?: string | null
           comparison_price?: string | null
           valid_period?: string | null
+          category?: string | null
+          valid_to?: string | null
           position?: number
           scraped_at?: string
         }
@@ -116,6 +120,8 @@ export interface Database {
           unit?: string | null
           comparison_price?: string | null
           valid_period?: string | null
+          category?: string | null
+          valid_to?: string | null
           position?: number
           scraped_at?: string
         }
