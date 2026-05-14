@@ -97,15 +97,46 @@ serve(async (req: Request) => {
     })
 
     const data = await response.json()
-    const raw = (data.choices?.[0]?.message?.content ?? "Övrigt").trim()
-    const category = categories.includes(raw) ? raw : "Övrigt"
+    const raw = (data.choices?.[0]?.message?.content ?? "").trim()
+    const category = matchCategory(raw, categories)
+
+    console.log("[categorize-item]", JSON.stringify({
+      itemName,
+      categories,
+      raw,
+      matched: category,
+    }))
 
     return new Response(JSON.stringify({ category }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
-  } catch {
+  } catch (err) {
+    console.error("[categorize-item] error", err)
     return new Response(JSON.stringify({ category: "Övrigt" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
 })
+
+function matchCategory(raw: string, categories: string[]): string {
+  if (!raw) return "Övrigt"
+
+  // Strip surrounding quotes, leading/trailing punctuation, and whitespace.
+  const cleaned = raw
+    .replace(/^[\s"'`*_]+|[\s"'`*_.,;:!?]+$/g, "")
+    .trim()
+
+  // Exact match.
+  if (categories.includes(cleaned)) return cleaned
+
+  // Case-insensitive match.
+  const lower = cleaned.toLocaleLowerCase("sv")
+  const ci = categories.find(c => c.toLocaleLowerCase("sv") === lower)
+  if (ci) return ci
+
+  // Substring match: the model wrapped the category in a sentence.
+  const containing = categories.find(c => cleaned.includes(c))
+  if (containing) return containing
+
+  return "Övrigt"
+}
