@@ -58,6 +58,7 @@ export interface Database {
           id: string
           household_id: string
           name: string
+          offers_url: string | null
           created_by: string
           created_at: string
         }
@@ -65,6 +66,7 @@ export interface Database {
           id?: string
           household_id: string
           name: string
+          offers_url?: string | null
           created_by: string
           created_at?: string
         }
@@ -72,6 +74,7 @@ export interface Database {
           id?: string
           household_id?: string
           name?: string
+          offers_url?: string | null
           created_by?: string
           created_at?: string
         }

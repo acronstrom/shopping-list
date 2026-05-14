@@ -43,6 +43,27 @@ export function useAddStore() {
   })
 }
 
+export function useUpdateStore() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, offers_url }: { id: string; offers_url: string | null }) => {
+      const { data, error } = await supabase
+        .from('stores')
+        .update({ offers_url })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as Store
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stores', householdId] })
+    },
+  })
+}
+
 export function useDeleteStore() {
   const { householdId } = useAuth()
   const queryClient = useQueryClient()
