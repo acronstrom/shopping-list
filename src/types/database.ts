@@ -59,6 +59,7 @@ export interface Database {
           household_id: string
           name: string
           offers_url: string | null
+          offers_scraped_at: string | null
           created_by: string
           created_at: string
         }
@@ -67,6 +68,7 @@ export interface Database {
           household_id: string
           name: string
           offers_url?: string | null
+          offers_scraped_at?: string | null
           created_by: string
           created_at?: string
         }
@@ -75,8 +77,47 @@ export interface Database {
           household_id?: string
           name?: string
           offers_url?: string | null
+          offers_scraped_at?: string | null
           created_by?: string
           created_at?: string
+        }
+      }
+      store_offers: {
+        Row: {
+          id: string
+          store_id: string
+          name: string
+          brand: string | null
+          price: string | null
+          unit: string | null
+          comparison_price: string | null
+          valid_period: string | null
+          position: number
+          scraped_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          name: string
+          brand?: string | null
+          price?: string | null
+          unit?: string | null
+          comparison_price?: string | null
+          valid_period?: string | null
+          position?: number
+          scraped_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          name?: string
+          brand?: string | null
+          price?: string | null
+          unit?: string | null
+          comparison_price?: string | null
+          valid_period?: string | null
+          position?: number
+          scraped_at?: string
         }
       }
       grocery_items: {
