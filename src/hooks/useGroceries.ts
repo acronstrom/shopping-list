@@ -90,6 +90,64 @@ export function useAddGrocery() {
   })
 }
 
+export interface BulkGroceryInput {
+  name: string
+  quantity?: string | null
+  category?: string
+}
+
+export function useAddGroceriesBulk() {
+  const queryClient = useQueryClient()
+  const { householdId, user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (items: BulkGroceryInput[]) => {
+      if (items.length === 0) return []
+      const rows = items.map(item => ({
+        household_id: householdId!,
+        name: capitalizeFirst(item.name.trim()),
+        category: item.category?.trim() || 'Övrigt',
+        quantity: item.quantity?.trim() || null,
+        added_by: user!.id,
+      }))
+
+      const { data, error } = await supabase
+        .from('grocery_items')
+        .insert(rows)
+        .select()
+      if (error) throw error
+      return (data ?? []) as GroceryItem[]
+    },
+    onMutate: async (items) => {
+      await queryClient.cancelQueries({ queryKey: ['groceries', householdId] })
+      const prev = queryClient.getQueryData<GroceryItem[]>(['groceries', householdId])
+      const now = new Date().toISOString()
+      const optimistic: GroceryItem[] = items.map((item, i) => ({
+        id: `temp-${Date.now()}-${i}`,
+        household_id: householdId!,
+        name: capitalizeFirst(item.name.trim()),
+        category: item.category?.trim() || 'Övrigt',
+        quantity: item.quantity?.trim() || null,
+        note: null,
+        is_checked: false,
+        added_by: user!.id,
+        created_at: now,
+        updated_at: now,
+      }))
+      queryClient.setQueryData<GroceryItem[]>(['groceries', householdId], old =>
+        [...optimistic, ...(old ?? [])]
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['groceries', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['groceries', householdId] })
+    },
+  })
+}
+
 export function useToggleGrocery() {
   const queryClient = useQueryClient()
   const { householdId } = useAuth()
