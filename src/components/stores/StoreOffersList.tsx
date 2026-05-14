@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStoreOffers, useRefreshOffers } from '@/hooks/useStoreOffers'
+import { useAddGrocery } from '@/hooks/useGroceries'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { clsx } from 'clsx'
@@ -174,10 +175,36 @@ export function StoreOffersList({ storeId, hasUrl, scrapedAt }: Props) {
 }
 
 function OfferRow({ offer }: { offer: StoreOffer }) {
+  const addGrocery = useAddGrocery()
+  const [justAdded, setJustAdded] = useState(false)
   const validToLabel = formatValidTo(offer.valid_to)
+
+  async function handleAdd() {
+    if (addGrocery.isPending) return
+    try {
+      await addGrocery.mutateAsync({
+        name: offer.name,
+        quantity: offer.unit ?? undefined,
+      })
+      setJustAdded(true)
+      window.setTimeout(() => setJustAdded(false), 1500)
+    } catch (err) {
+      console.error('[OfferRow] add failed', err)
+    }
+  }
+
   return (
-    <li className="px-3 py-2.5">
-      <div className="flex items-start justify-between gap-3">
+    <li>
+      <button
+        type="button"
+        onClick={handleAdd}
+        disabled={addGrocery.isPending}
+        className={clsx(
+          'group w-full text-left px-3 py-2.5 flex items-start justify-between gap-3 transition-colors active:bg-emerald-50/80',
+          justAdded ? 'bg-emerald-50/60' : 'hover:bg-gray-50/80'
+        )}
+        aria-label={`Lägg till ${offer.name} i listan`}
+      >
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-900 truncate">{offer.name}</p>
           <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-0.5">
@@ -190,12 +217,33 @@ function OfferRow({ offer }: { offer: StoreOffer }) {
             <p className="text-xs text-gray-400 mt-0.5 italic">{offer.valid_period}</p>
           )}
         </div>
-        {offer.price && (
-          <span className="text-sm font-semibold text-emerald-600 whitespace-nowrap flex-shrink-0">
-            {offer.price}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {offer.price && (
+            <span className="text-sm font-semibold text-emerald-600 whitespace-nowrap">
+              {offer.price}
+            </span>
+          )}
+          <span
+            className={clsx(
+              'inline-flex items-center justify-center w-7 h-7 rounded-full transition-all',
+              justAdded
+                ? 'bg-emerald-500 text-white scale-100'
+                : 'bg-gray-100 text-gray-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'
+            )}
+            aria-hidden
+          >
+            {justAdded ? (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            )}
           </span>
-        )}
-      </div>
+        </div>
+      </button>
     </li>
   )
 }

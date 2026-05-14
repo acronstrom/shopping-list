@@ -24,6 +24,7 @@ function openOffers(url: string | null) {
 
 export function StoreCard({ store }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [orderExpanded, setOrderExpanded] = useState(false)
   const [urlInput, setUrlInput] = useState(store.offers_url ?? '')
   const [urlError, setUrlError] = useState('')
   const [seededUrl, setSeededUrl] = useState<string | null>(store.offers_url)
@@ -157,11 +158,27 @@ export function StoreCard({ store }: Props) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategoriordning</p>
-            <p className="text-xs text-gray-400">
-              Välj i vilken ordning kategorierna ska visas/sorteras i den här butiken.
-            </p>
-            <StoreCategoryOrderEditor storeId={store.id} />
+            <button
+              type="button"
+              onClick={() => setOrderExpanded(o => !o)}
+              className="flex items-center justify-between gap-2 -mx-1 px-1 py-1 rounded-lg hover:bg-gray-50/80 transition-colors"
+            >
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategoriordning</span>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform ${orderExpanded ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {orderExpanded && (
+              <>
+                <p className="text-xs text-gray-400">
+                  Välj i vilken ordning kategorierna ska visas/sorteras i den här butiken.
+                </p>
+                <StoreCategoryOrderEditor storeId={store.id} />
+              </>
+            )}
           </div>
         </div>
       )}

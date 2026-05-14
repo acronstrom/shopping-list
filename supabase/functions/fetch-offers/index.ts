@@ -296,16 +296,46 @@ interface IpaperPaper {
 
 function parseIpaperPaper(html: string, sourceUrl: string): IpaperPaper | null {
   if (!/ipaper\.io/i.test(sourceUrl) && !/ipaper\.io/i.test(html)) return null
-  const guidMatch = html.match(/"PaperGuid":"([a-f0-9-]+)"/i) ??
-                    html.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i)
-  const pageCountMatch = html.match(/"PageCount":\s*(\d+)/i)
-  const urlMatch = html.match(/"Url":"([^"]*pdfs[^"]*)"/i)
 
+  // Primary source: the og:image URL's base64 v=… parameter contains a
+  // JSON object with PaperGuid, PageCount, Url. Decoding that is the
+  // most reliable way to get the paper's metadata — the same fields are
+  // not present in plain text anywhere else in the HTML.
+  const ogMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
+  if (ogMatch) {
+    const v = new URL(ogMatch[1], "https://b-cdn.ipaper.io").searchParams.get("v")
+    if (v) {
+      try {
+        const payload = JSON.parse(atob(v)) as {
+          PaperGuid?: string
+          PageCount?: number
+          Url?: string
+        }
+        if (payload.PaperGuid) {
+          return {
+            guid: payload.PaperGuid,
+            pageCount: Math.min(payload.PageCount ?? 1, 30),
+            url: payload.Url ?? "",
+            sourceUrl,
+          }
+        }
+      } catch (err) {
+        console.error("[fetch-offers] iPaper og:image decode failed", err)
+      }
+    }
+  }
+
+  // Fallback: any bare GUID + a best-guess page count from "Page N" mentions.
+  const guidMatch = html.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i)
   if (!guidMatch) return null
+  const pageMentions = html.match(/\bPage\s+\d+\b/gi) ?? []
+  const maxPage = pageMentions
+    .map(s => parseInt(s.replace(/\D/g, ""), 10))
+    .reduce((m, n) => Math.max(m, n), 0)
   return {
-    guid: guidMatch[1] ?? guidMatch[0],
-    pageCount: Math.min(parseInt(pageCountMatch?.[1] ?? "1", 10) || 1, 20),
-    url: urlMatch?.[1] ?? "",
+    guid: guidMatch[0],
+    pageCount: Math.min(maxPage || 1, 30),
+    url: "",
     sourceUrl,
   }
 }
