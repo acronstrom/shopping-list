@@ -151,6 +151,7 @@ export function StoreCard({ store }: Props) {
             <div className="mt-2 pt-3 border-t border-gray-100">
               <StoreOffersList
                 storeId={store.id}
+                storeName={store.name}
                 hasUrl={hasUrl}
                 scrapedAt={store.offers_scraped_at}
               />

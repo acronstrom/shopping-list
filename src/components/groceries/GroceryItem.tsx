@@ -156,7 +156,18 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           >
             {capitalizeFirst(item.name)}
           </span>
+          {item.quantity && (
+            <span className={clsx('text-xs text-gray-500', item.is_checked && 'line-through text-gray-300')}>
+              {item.quantity}
+            </span>
+          )}
         </div>
+        {item.note && (
+          <p className={clsx('text-xs text-emerald-700 mt-0.5 flex items-center gap-1', item.is_checked && 'text-gray-300')}>
+            <span aria-hidden>🏷️</span>
+            <span className="truncate">{item.note}</span>
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-0.5">
           <CategoryBadge category={item.category} />
           {showAisle && aisleNumber !== undefined && (

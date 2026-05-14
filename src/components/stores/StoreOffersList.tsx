@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useStoreOffers, useRefreshOffers } from '@/hooks/useStoreOffers'
-import { useAddGrocery } from '@/hooks/useGroceries'
+import { useAddGrocery, useGroceries } from '@/hooks/useGroceries'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { clsx } from 'clsx'
 import type { StoreOffer } from '@/types'
 
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase()
+}
+
 interface Props {
   storeId: string
+  storeName: string
   hasUrl: boolean
   scrapedAt: string | null
 }
@@ -43,12 +48,18 @@ function formatValidTo(iso: string | null): string | null {
   return d.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' })
 }
 
-export function StoreOffersList({ storeId, hasUrl, scrapedAt }: Props) {
+export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props) {
   const { data: offers = [], isLoading } = useStoreOffers(storeId)
+  const { data: groceries = [] } = useGroceries()
   const refresh = useRefreshOffers()
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [query, setQuery] = useState('')
+
+  const existingNames = useMemo(
+    () => new Set(groceries.map(g => normalizeName(g.name))),
+    [groceries]
+  )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -160,7 +171,14 @@ export function StoreOffersList({ storeId, hasUrl, scrapedAt }: Props) {
                     </button>
                     {isOpen && (
                       <ul className="divide-y divide-gray-100 border-t border-gray-100">
-                        {items.map(offer => <OfferRow key={offer.id} offer={offer} />)}
+                        {items.map(offer => (
+                          <OfferRow
+                            key={offer.id}
+                            offer={offer}
+                            storeName={storeName}
+                            alreadyInList={existingNames.has(normalizeName(offer.name))}
+                          />
+                        ))}
                       </ul>
                     )}
                   </div>
@@ -174,20 +192,28 @@ export function StoreOffersList({ storeId, hasUrl, scrapedAt }: Props) {
   )
 }
 
-function OfferRow({ offer }: { offer: StoreOffer }) {
+function OfferRow({
+  offer,
+  storeName,
+  alreadyInList,
+}: {
+  offer: StoreOffer
+  storeName: string
+  alreadyInList: boolean
+}) {
   const addGrocery = useAddGrocery()
-  const [justAdded, setJustAdded] = useState(false)
   const validToLabel = formatValidTo(offer.valid_to)
+  const disabled = alreadyInList || addGrocery.isPending
 
   async function handleAdd() {
-    if (addGrocery.isPending) return
+    if (disabled) return
     try {
+      const priceTag = offer.price ? ` · ${offer.price}` : ''
       await addGrocery.mutateAsync({
         name: offer.name,
         quantity: offer.unit ?? undefined,
+        note: `Erbjudande på ${storeName}${priceTag}`,
       })
-      setJustAdded(true)
-      window.setTimeout(() => setJustAdded(false), 1500)
     } catch (err) {
       console.error('[OfferRow] add failed', err)
     }
@@ -198,15 +224,19 @@ function OfferRow({ offer }: { offer: StoreOffer }) {
       <button
         type="button"
         onClick={handleAdd}
-        disabled={addGrocery.isPending}
+        disabled={disabled}
         className={clsx(
-          'group w-full text-left px-3 py-2.5 flex items-start justify-between gap-3 transition-colors active:bg-emerald-50/80',
-          justAdded ? 'bg-emerald-50/60' : 'hover:bg-gray-50/80'
+          'group w-full text-left px-3 py-2.5 flex items-start justify-between gap-3 transition-colors',
+          alreadyInList
+            ? 'bg-emerald-50/40 cursor-default'
+            : 'hover:bg-gray-50/80 active:bg-emerald-50/80'
         )}
-        aria-label={`Lägg till ${offer.name} i listan`}
+        aria-label={alreadyInList ? `${offer.name} finns redan i listan` : `Lägg till ${offer.name} i listan`}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-900 truncate">{offer.name}</p>
+          <p className={clsx('text-sm font-medium truncate', alreadyInList ? 'text-gray-500' : 'text-gray-900')}>
+            {offer.name}
+          </p>
           <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-0.5">
             {offer.brand && <span>{offer.brand}</span>}
             {offer.unit && <span>{offer.unit}</span>}
@@ -219,20 +249,20 @@ function OfferRow({ offer }: { offer: StoreOffer }) {
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {offer.price && (
-            <span className="text-sm font-semibold text-emerald-600 whitespace-nowrap">
+            <span className={clsx('text-sm font-semibold whitespace-nowrap', alreadyInList ? 'text-gray-400' : 'text-emerald-600')}>
               {offer.price}
             </span>
           )}
           <span
             className={clsx(
               'inline-flex items-center justify-center w-7 h-7 rounded-full transition-all',
-              justAdded
-                ? 'bg-emerald-500 text-white scale-100'
+              alreadyInList
+                ? 'bg-emerald-500 text-white'
                 : 'bg-gray-100 text-gray-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'
             )}
             aria-hidden
           >
-            {justAdded ? (
+            {alreadyInList ? (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>

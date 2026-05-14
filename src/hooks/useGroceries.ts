@@ -26,7 +26,7 @@ export function useAddGrocery() {
   const { householdId, user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ name, quantity }: { name: string; quantity?: string }) => {
+    mutationFn: async ({ name, quantity, note }: { name: string; quantity?: string; note?: string }) => {
       const tempId = crypto.randomUUID()
       const cleanName = capitalizeFirst(name.trim())
 
@@ -38,6 +38,7 @@ export function useAddGrocery() {
           name: cleanName,
           category: 'Övrigt',
           quantity: quantity?.trim() || null,
+          note: note?.trim() || null,
           added_by: user!.id,
         }])
         .select()
@@ -61,7 +62,7 @@ export function useAddGrocery() {
 
       return data as GroceryItem
     },
-    onMutate: async ({ name, quantity }) => {
+    onMutate: async ({ name, quantity, note }) => {
       await queryClient.cancelQueries({ queryKey: ['groceries', householdId] })
       const prev = queryClient.getQueryData<GroceryItem[]>(['groceries', householdId])
       const optimistic: GroceryItem = {
@@ -70,7 +71,7 @@ export function useAddGrocery() {
         name: capitalizeFirst(name.trim()),
         category: 'Övrigt',
         quantity: quantity?.trim() || null,
-        note: null,
+        note: note?.trim() || null,
         is_checked: false,
         added_by: user!.id,
         created_at: new Date().toISOString(),
