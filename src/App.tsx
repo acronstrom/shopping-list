@@ -8,7 +8,6 @@ import { AuthGuard } from '@/components/auth/AuthGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { HouseholdSetup } from '@/components/household/HouseholdSetup'
 import { ShoppingListPage } from '@/pages/ShoppingListPage'
-import { StoresPage } from '@/pages/StoresPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -23,7 +22,6 @@ function AppRoutes() {
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<ShoppingListPage />} />
-          <Route path="/stores" element={<StoresPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
