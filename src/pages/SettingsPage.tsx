@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { InviteMemberForm } from '@/components/household/InviteMemberForm'
-import { StoreCard } from '@/components/stores/StoreCard'
 import { useHouseholdMembers } from '@/hooks/useHousehold'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -9,21 +8,16 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAddHouseholdCategory, useDeleteHouseholdCategory, useHouseholdCategories } from '@/hooks/useCategories'
-import { useStores, useAddStore } from '@/hooks/useStores'
 
 export function SettingsPage() {
   const { user } = useAuth()
   const { data: members = [], isLoading } = useHouseholdMembers()
   const { data: householdCategories = [], isLoading: loadingCategories } = useHouseholdCategories()
-  const { data: stores = [], isLoading: loadingStores } = useStores()
   const addCategory = useAddHouseholdCategory()
   const deleteCategory = useDeleteHouseholdCategory()
-  const addStore = useAddStore()
   const [signingOut, setSigningOut] = useState(false)
   const [newCategory, setNewCategory] = useState('')
   const [categoryError, setCategoryError] = useState('')
-  const [newStore, setNewStore] = useState('')
-  const [storeError, setStoreError] = useState('')
 
   const orderedCategories = useMemo(() => {
     return [...householdCategories].sort((a, b) => {
@@ -50,18 +44,6 @@ export function SettingsPage() {
     }
   }
 
-  async function handleAddStore() {
-    setStoreError('')
-    const trimmed = newStore.trim()
-    if (!trimmed) return
-    try {
-      await addStore.mutateAsync(trimmed)
-      setNewStore('')
-    } catch (e) {
-      setStoreError(e instanceof Error ? e.message : 'Det gick inte att lägga till butik')
-    }
-  }
-
   return (
     <div>
       <Header title="Inställningar" />
@@ -78,7 +60,7 @@ export function SettingsPage() {
               <div className="p-4 flex flex-col gap-4">
                 <div>
                   <p className="text-sm text-gray-600">
-                    Kategorierna används för att sortera din inköpslista. Ordningen per butik ställer du in under <strong>Butiker</strong> nedan.
+                    Kategorierna används för att sortera din inköpslista. Ordningen per butik ställer du in under <strong>Butiker</strong>.
                   </p>
                 </div>
 
@@ -136,57 +118,6 @@ export function SettingsPage() {
                         </Button>
                       </div>
                     ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
-            Butiker
-          </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {loadingStores ? (
-              <div className="flex justify-center py-6"><Spinner /></div>
-            ) : (
-              <div className="p-4 flex flex-col gap-4">
-                <p className="text-sm text-gray-600">
-                  Lägg till butiker för att tilldela gångnummer och kategoriordning under handlingen.
-                </p>
-
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Input
-                      label="Ny butik"
-                      value={newStore}
-                      onChange={e => setNewStore(e.target.value)}
-                      placeholder="t.ex. ICA Maxi"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={handleAddStore}
-                    loading={addStore.isPending}
-                    disabled={!newStore.trim()}
-                  >
-                    Lägg till
-                  </Button>
-                </div>
-                {storeError && (
-                  <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
-                    {storeError}
-                  </p>
-                )}
-
-                {stores.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-2 text-center">
-                    Inga butiker ännu.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {stores.map(store => <StoreCard key={store.id} store={store} />)}
                   </div>
                 )}
               </div>
