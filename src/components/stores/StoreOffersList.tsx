@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStoreOffers, useRefreshOffers } from '@/hooks/useStoreOffers'
-import { useAddGrocery, useGroceries } from '@/hooks/useGroceries'
+import { useAddGrocery, useDeleteGrocery, useGroceries } from '@/hooks/useGroceries'
+import { useFrequentlyBoughtNames, type FrequentItem } from '@/hooks/usePurchaseHistory'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { clsx } from 'clsx'
@@ -8,6 +9,23 @@ import type { StoreOffer } from '@/types'
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase()
+}
+
+// Treat an offer as a "frequently bought" match if its name overlaps with
+// a historical purchase name as a substring in either direction. We
+// require both strings to have ≥3 characters to avoid noise (e.g. "Os"
+// matching "Postlådor"). Returns the highest-count match found.
+function matchFrequentBuy(offer: StoreOffer, frequents: FrequentItem[]): FrequentItem | null {
+  const offerName = normalizeName(offer.name)
+  if (offerName.length < 3) return null
+  let best: FrequentItem | null = null
+  for (const f of frequents) {
+    if (f.name.length < 3) continue
+    if (offerName.includes(f.name) || f.name.includes(offerName)) {
+      if (!best || f.count > best.count) best = f
+    }
+  }
+  return best
 }
 
 interface Props {
@@ -51,15 +69,29 @@ function formatValidTo(iso: string | null): string | null {
 export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props) {
   const { data: offers = [], isLoading } = useStoreOffers(storeId)
   const { data: groceries = [] } = useGroceries()
+  const { data: frequents = [] } = useFrequentlyBoughtNames()
   const refresh = useRefreshOffers()
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [query, setQuery] = useState('')
 
-  const existingNames = useMemo(
-    () => new Set(groceries.map(g => normalizeName(g.name))),
-    [groceries]
-  )
+  const existingIdsByName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const g of groceries) {
+      const key = normalizeName(g.name)
+      if (!map.has(key)) map.set(key, g.id)
+    }
+    return map
+  }, [groceries])
+
+  const frequentMatches = useMemo(() => {
+    if (frequents.length === 0 || offers.length === 0) return []
+    const matched = offers
+      .map(offer => ({ offer, match: matchFrequentBuy(offer, frequents) }))
+      .filter((row): row is { offer: StoreOffer; match: FrequentItem } => row.match !== null)
+    matched.sort((a, b) => b.match.count - a.match.count)
+    return matched.slice(0, 12)
+  }, [offers, frequents])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -128,6 +160,29 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
         </p>
       ) : (
         <>
+          {frequentMatches.length > 0 && !query && (
+            <div className="bg-white rounded-xl border border-emerald-200/80 overflow-hidden shadow-sm">
+              <div className="px-3 py-2 bg-emerald-50/60 border-b border-emerald-100/80 flex items-center justify-between">
+                <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                  <span aria-hidden>⭐</span>
+                  Du köper ofta
+                </p>
+                <span className="text-xs text-emerald-600/80">{frequentMatches.length}</span>
+              </div>
+              <ul className="divide-y divide-gray-100">
+                {frequentMatches.map(({ offer, match }) => (
+                  <OfferRow
+                    key={`fav-${offer.id}`}
+                    offer={offer}
+                    storeName={storeName}
+                    existingGroceryId={existingIdsByName.get(normalizeName(offer.name)) ?? null}
+                    frequencyBadge={`Köpt ${match.count}×`}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+
           <input
             type="search"
             value={query}
@@ -176,7 +231,7 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
                             key={offer.id}
                             offer={offer}
                             storeName={storeName}
-                            alreadyInList={existingNames.has(normalizeName(offer.name))}
+                            existingGroceryId={existingIdsByName.get(normalizeName(offer.name)) ?? null}
                           />
                         ))}
                       </ul>
@@ -195,18 +250,23 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
 function OfferRow({
   offer,
   storeName,
-  alreadyInList,
+  existingGroceryId,
+  frequencyBadge,
 }: {
   offer: StoreOffer
   storeName: string
-  alreadyInList: boolean
+  existingGroceryId: string | null
+  frequencyBadge?: string
 }) {
   const addGrocery = useAddGrocery()
+  const deleteGrocery = useDeleteGrocery()
   const validToLabel = formatValidTo(offer.valid_to)
-  const disabled = alreadyInList || addGrocery.isPending
+  const alreadyInList = existingGroceryId !== null
+  const pending = addGrocery.isPending || deleteGrocery.isPending
 
-  async function handleAdd() {
-    if (disabled) return
+  async function handleAdd(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (pending) return
     try {
       const priceTag = offer.price ? ` · ${offer.price}` : ''
       await addGrocery.mutateAsync({
@@ -219,61 +279,69 @@ function OfferRow({
     }
   }
 
+  async function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (pending || !existingGroceryId) return
+    try {
+      await deleteGrocery.mutateAsync(existingGroceryId)
+    } catch (err) {
+      console.error('[OfferRow] remove failed', err)
+    }
+  }
+
   return (
-    <li>
-      <button
-        type="button"
-        onClick={handleAdd}
-        disabled={disabled}
-        className={clsx(
-          'group w-full text-left px-3 py-2.5 flex items-start justify-between gap-3 transition-colors',
-          alreadyInList
-            ? 'bg-emerald-50/40 cursor-default'
-            : 'hover:bg-gray-50/80 active:bg-emerald-50/80'
+    <li
+      className={clsx(
+        'px-3 py-2.5 flex items-start justify-between gap-3',
+        alreadyInList && 'bg-emerald-50/40'
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className={clsx('text-sm font-medium truncate', alreadyInList ? 'text-gray-500' : 'text-gray-900')}>
+          {offer.name}
+        </p>
+        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+          {frequencyBadge && (
+            <span className="text-emerald-700 font-medium">{frequencyBadge}</span>
+          )}
+          {offer.brand && <span>{offer.brand}</span>}
+          {offer.unit && <span>{offer.unit}</span>}
+          {offer.comparison_price && <span>Jmf {offer.comparison_price}</span>}
+          {validToLabel && <span className="text-amber-600">t.o.m. {validToLabel}</span>}
+        </div>
+        {offer.valid_period && (
+          <p className="text-xs text-gray-400 mt-0.5 italic">{offer.valid_period}</p>
         )}
-        aria-label={alreadyInList ? `${offer.name} finns redan i listan` : `Lägg till ${offer.name} i listan`}
-      >
-        <div className="min-w-0 flex-1">
-          <p className={clsx('text-sm font-medium truncate', alreadyInList ? 'text-gray-500' : 'text-gray-900')}>
-            {offer.name}
-          </p>
-          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-0.5">
-            {offer.brand && <span>{offer.brand}</span>}
-            {offer.unit && <span>{offer.unit}</span>}
-            {offer.comparison_price && <span>Jmf {offer.comparison_price}</span>}
-            {validToLabel && <span className="text-amber-600">t.o.m. {validToLabel}</span>}
-          </div>
-          {offer.valid_period && (
-            <p className="text-xs text-gray-400 mt-0.5 italic">{offer.valid_period}</p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {offer.price && (
-            <span className={clsx('text-sm font-semibold whitespace-nowrap', alreadyInList ? 'text-gray-400' : 'text-emerald-600')}>
-              {offer.price}
-            </span>
-          )}
-          <span
-            className={clsx(
-              'inline-flex items-center justify-center w-7 h-7 rounded-full transition-all',
-              alreadyInList
-                ? 'bg-emerald-500 text-white'
-                : 'bg-gray-100 text-gray-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'
-            )}
-            aria-hidden
-          >
-            {alreadyInList ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-            )}
+      </div>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        {offer.price && (
+          <span className={clsx('text-sm font-semibold whitespace-nowrap', alreadyInList ? 'text-gray-400' : 'text-emerald-600')}>
+            {offer.price}
           </span>
-        </div>
-      </button>
+        )}
+        <button
+          type="button"
+          onClick={alreadyInList ? handleRemove : handleAdd}
+          disabled={pending}
+          aria-label={alreadyInList ? `Ta bort ${offer.name} från listan` : `Lägg till ${offer.name} i listan`}
+          className={clsx(
+            'inline-flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-95 disabled:opacity-50',
+            alreadyInList
+              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+              : 'bg-gray-100 text-gray-500 hover:bg-emerald-100 hover:text-emerald-600'
+          )}
+        >
+          {alreadyInList ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          )}
+        </button>
+      </div>
     </li>
   )
 }

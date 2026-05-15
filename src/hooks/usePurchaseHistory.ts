@@ -78,6 +78,44 @@ export function useDeletePurchaseHistoryItem() {
   })
 }
 
+export interface FrequentItem {
+  name: string
+  count: number
+}
+
+export function useFrequentlyBoughtNames({
+  minCount = 2,
+  limit = 30,
+}: { minCount?: number; limit?: number } = {}) {
+  const { householdId } = useAuth()
+  return useQuery({
+    queryKey: ['frequently-bought', householdId, minCount, limit],
+    queryFn: async (): Promise<FrequentItem[]> => {
+      const { data, error } = await supabase
+        .from('purchase_history')
+        .select('item_name')
+        .eq('household_id', householdId!)
+        .order('purchased_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+
+      const counts = new Map<string, number>()
+      for (const row of (data ?? []) as Array<{ item_name: string }>) {
+        const key = row.item_name.toLowerCase().trim()
+        if (!key) continue
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+      }
+
+      return Array.from(counts.entries())
+        .filter(([, count]) => count >= minCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([name, count]) => ({ name, count }))
+    },
+    enabled: !!householdId,
+  })
+}
+
 export function useSuggestions(currentItemNames: string[]) {
   const { householdId } = useAuth()
   const currentSet = new Set(currentItemNames.map(n => n.toLowerCase().trim()))
