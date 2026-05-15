@@ -42,6 +42,53 @@ export function useAddHouseholdCategory() {
   })
 }
 
+export function useReorderHouseholdCategories() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const cached =
+        queryClient.getQueryData<HouseholdCategory[]>(['household-categories', householdId]) ?? []
+      const byId = new Map(cached.map(c => [c.id, c]))
+      const rows = orderedIds.map((id, idx) => {
+        const existing = byId.get(id)
+        if (!existing) throw new Error('Kategori saknas i cache')
+        return {
+          id,
+          household_id: existing.household_id,
+          name: existing.name,
+          sort_order: (idx + 1) * 10,
+        }
+      })
+      const { error } = await supabase
+        .from('household_categories')
+        .upsert(rows, { onConflict: 'id' })
+      if (error) throw error
+    },
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey: ['household-categories', householdId] })
+      const prev = queryClient.getQueryData<HouseholdCategory[]>(['household-categories', householdId])
+      if (prev) {
+        const byId = new Map(prev.map(c => [c.id, c]))
+        const next = orderedIds
+          .map((id, idx) => {
+            const existing = byId.get(id)
+            return existing ? { ...existing, sort_order: (idx + 1) * 10 } : null
+          })
+          .filter((c): c is HouseholdCategory => c !== null)
+        queryClient.setQueryData(['household-categories', householdId], next)
+      }
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['household-categories', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['household-categories', householdId] })
+    },
+  })
+}
+
 export function useDeleteHouseholdCategory() {
   const { householdId } = useAuth()
   const queryClient = useQueryClient()
