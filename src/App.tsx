@@ -10,6 +10,7 @@ import { HouseholdSetup } from '@/components/household/HouseholdSetup'
 import { ShoppingListPage } from '@/pages/ShoppingListPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { RecipesPage } from '@/pages/RecipesPage'
+import { RecipePage } from '@/pages/RecipePage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -25,6 +26,7 @@ function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/" element={<ShoppingListPage />} />
           <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/recipes/:id" element={<RecipePage />} />
           <Route path="/stores" element={<StoresPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />

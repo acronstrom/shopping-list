@@ -235,6 +235,8 @@ export interface Database {
           household_id: string
           name: string
           notes: string | null
+          instructions: string | null
+          servings: number
           created_by: string
           created_at: string
           updated_at: string
@@ -244,6 +246,8 @@ export interface Database {
           household_id: string
           name: string
           notes?: string | null
+          instructions?: string | null
+          servings?: number
           created_by: string
           created_at?: string
           updated_at?: string
@@ -253,6 +257,8 @@ export interface Database {
           household_id?: string
           name?: string
           notes?: string | null
+          instructions?: string | null
+          servings?: number
           created_by?: string
           created_at?: string
           updated_at?: string

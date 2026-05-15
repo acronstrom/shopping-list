@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
@@ -7,6 +8,7 @@ import { NewRecipeModal } from '@/components/recipes/NewRecipeModal'
 import { useRecipes } from '@/hooks/useRecipes'
 
 export function RecipesPage() {
+  const navigate = useNavigate()
   const { data: recipes = [], isLoading } = useRecipes()
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -28,7 +30,11 @@ export function RecipesPage() {
         )}
       </div>
 
-      <NewRecipeModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewRecipeModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSaved={(id) => navigate(`/recipes/${id}`)}
+      />
     </div>
   )
 }

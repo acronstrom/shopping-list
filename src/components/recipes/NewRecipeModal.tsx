@@ -4,13 +4,16 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
-import { useAddRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
+import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { fileToCompressedDataUrl } from '@/lib/image'
 import { clsx } from 'clsx'
+import type { RecipeWithIngredients } from '@/types'
 
 interface Props {
   open: boolean
   onClose: () => void
+  recipe?: RecipeWithIngredients | null
+  onSaved?: (id: string) => void
 }
 
 interface Row {
@@ -19,25 +22,40 @@ interface Row {
 }
 
 const EMPTY_ROW: Row = { name: '', quantity: '' }
+const DEFAULT_SERVINGS = 4
 
-export function NewRecipeModal({ open, onClose }: Props) {
-  const [name, setName] = useState('')
-  const [rows, setRows] = useState<Row[]>([{ ...EMPTY_ROW }])
+function rowsFromRecipe(recipe: RecipeWithIngredients | null | undefined): Row[] {
+  if (!recipe || recipe.ingredients.length === 0) return [{ ...EMPTY_ROW }]
+  return recipe.ingredients.map(i => ({ name: i.name, quantity: i.quantity ?? '' }))
+}
+
+export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
+  const editing = !!recipe
+  const [seededFor, setSeededFor] = useState<string | null>(null)
+  const [name, setName] = useState(recipe?.name ?? '')
+  const [instructions, setInstructions] = useState(recipe?.instructions ?? '')
+  const [servings, setServings] = useState(recipe?.servings ?? DEFAULT_SERVINGS)
+  const [rows, setRows] = useState<Row[]>(() => rowsFromRecipe(recipe))
   const [error, setError] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
   const parseRecipe = useParseRecipe()
   const addRecipe = useAddRecipe()
+  const updateRecipe = useUpdateRecipe()
   const fileRef = useRef<HTMLInputElement>(null)
 
-  function reset() {
-    setName('')
-    setRows([{ ...EMPTY_ROW }])
+  // Re-seed when the modal opens with a different recipe (or first open).
+  const seedKey = open ? (recipe?.id ?? 'new') : null
+  if (seedKey !== seededFor) {
+    setSeededFor(seedKey)
+    setName(recipe?.name ?? '')
+    setInstructions(recipe?.instructions ?? '')
+    setServings(recipe?.servings ?? DEFAULT_SERVINGS)
+    setRows(rowsFromRecipe(recipe))
     setError('')
     setParseError(null)
   }
 
   function handleClose() {
-    reset()
     onClose()
   }
 
@@ -66,8 +84,6 @@ export function NewRecipeModal({ open, onClose }: Props) {
         setParseError('Inga ingredienser hittades i bilden.')
         return
       }
-      // Merge into rows: keep any user-entered rows that already have content,
-      // then append the parsed ones.
       const userRows = rows.filter(r => r.name.trim().length > 0)
       const parsedRows: Row[] = parsed.map(p => ({
         name: p.name,
@@ -94,9 +110,27 @@ export function NewRecipeModal({ open, onClose }: Props) {
       setError('Lägg till minst en ingrediens')
       return
     }
+    const cleanServings = Math.max(1, Math.min(99, Math.round(servings) || DEFAULT_SERVINGS))
     try {
-      await addRecipe.mutateAsync({ name: trimmedName, ingredients })
-      handleClose()
+      if (editing && recipe) {
+        await updateRecipe.mutateAsync({
+          id: recipe.id,
+          name: trimmedName,
+          instructions: instructions.trim() || null,
+          servings: cleanServings,
+          ingredients,
+        })
+        onSaved?.(recipe.id)
+      } else {
+        const saved = await addRecipe.mutateAsync({
+          name: trimmedName,
+          instructions: instructions.trim() || null,
+          servings: cleanServings,
+          ingredients,
+        })
+        onSaved?.(saved.id)
+      }
+      onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Det gick inte att spara receptet')
     }
@@ -104,17 +138,46 @@ export function NewRecipeModal({ open, onClose }: Props) {
 
   const ingredientCount = rows.filter(r => r.name.trim().length > 0).length
   const parsing = parseRecipe.isPending
+  const saving = addRecipe.isPending || updateRecipe.isPending
 
   return (
-    <Modal open={open} onClose={handleClose} title="Nytt recept">
+    <Modal open={open} onClose={handleClose} title={editing ? 'Redigera recept' : 'Nytt recept'}>
       <div className="flex flex-col gap-3">
         <Input
           label="Receptets namn"
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="t.ex. Köttbullar med potatismos"
-          autoFocus
+          autoFocus={!editing}
         />
+
+        <div className="flex items-end gap-3">
+          <label className="flex flex-col gap-1 w-32">
+            <span className="text-sm font-medium text-gray-700">Portioner</span>
+            <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setServings(s => Math.max(1, s - 1))}
+                className="px-3 text-gray-500 hover:bg-gray-50"
+                aria-label="Minska portioner"
+              >−</button>
+              <input
+                type="number"
+                value={servings}
+                min={1}
+                max={99}
+                onChange={e => setServings(Number(e.target.value))}
+                className="flex-1 min-w-0 w-full text-center text-sm text-gray-900 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setServings(s => Math.min(99, s + 1))}
+                className="px-3 text-gray-500 hover:bg-gray-50"
+                aria-label="Öka portioner"
+              >+</button>
+            </div>
+          </label>
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -148,7 +211,7 @@ export function NewRecipeModal({ open, onClose }: Props) {
           <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{parseError}</p>
         )}
 
-        <div className="max-h-[40vh] overflow-y-auto -mx-1 px-1 flex flex-col gap-1.5">
+        <div className="max-h-[32vh] overflow-y-auto -mx-1 px-1 flex flex-col gap-1.5">
           {rows.map((row, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <input
@@ -187,6 +250,19 @@ export function NewRecipeModal({ open, onClose }: Props) {
           + Lägg till ingrediens
         </button>
 
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Instruktioner
+          </span>
+          <textarea
+            value={instructions}
+            onChange={e => setInstructions(e.target.value)}
+            placeholder={'1. Riv löken fint.\n2. Blanda alla ingredienser…'}
+            rows={6}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors resize-y"
+          />
+        </label>
+
         {error && (
           <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
         )}
@@ -198,11 +274,11 @@ export function NewRecipeModal({ open, onClose }: Props) {
           <Button
             type="button"
             onClick={handleSave}
-            loading={addRecipe.isPending}
+            loading={saving}
             disabled={!name.trim() || ingredientCount === 0}
             className="flex-1"
           >
-            Spara recept
+            {editing ? 'Spara ändringar' : 'Spara recept'}
           </Button>
         </div>
       </div>
