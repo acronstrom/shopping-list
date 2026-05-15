@@ -35,7 +35,26 @@ export function useAddStore() {
         if (error.code === '23505') throw new Error('A store with this name already exists.')
         throw error
       }
-      return data as Store
+
+      // Seed the new store's category list from household defaults so it
+      // starts with the same categories as the household-wide list.
+      const store = data as Store
+      const { data: defaults } = await supabase
+        .from('household_categories')
+        .select('name, sort_order')
+        .eq('household_id', householdId!)
+        .order('sort_order')
+        .order('name')
+      if (defaults && defaults.length > 0) {
+        const rows = defaults.map((c, i) => ({
+          store_id: store.id,
+          category_name: c.name,
+          position: i,
+        }))
+        await supabase.from('store_category_orders').insert(rows)
+      }
+
+      return store
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stores', householdId] })
