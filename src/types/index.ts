@@ -9,6 +9,12 @@ export type PurchaseHistory = Database['public']['Tables']['purchase_history']['
 export type HouseholdCategory = Database['public']['Tables']['household_categories']['Row']
 export type StoreCategoryOrder = Database['public']['Tables']['store_category_orders']['Row']
 export type StoreOffer = Database['public']['Tables']['store_offers']['Row']
+export type Recipe = Database['public']['Tables']['recipes']['Row']
+export type RecipeIngredient = Database['public']['Tables']['recipe_ingredients']['Row']
+
+export interface RecipeWithIngredients extends Recipe {
+  ingredients: RecipeIngredient[]
+}
 
 export type GroceryItemInsert = Database['public']['Tables']['grocery_items']['Insert']
 export type StoreInsert = Database['public']['Tables']['stores']['Insert']

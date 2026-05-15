@@ -229,6 +229,61 @@ export interface Database {
           created_at?: string
         }
       }
+      recipes: {
+        Row: {
+          id: string
+          household_id: string
+          name: string
+          notes: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          name: string
+          notes?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          name?: string
+          notes?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      recipe_ingredients: {
+        Row: {
+          id: string
+          recipe_id: string
+          name: string
+          quantity: string | null
+          position: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          recipe_id: string
+          name: string
+          quantity?: string | null
+          position?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          recipe_id?: string
+          name?: string
+          quantity?: string | null
+          position?: number
+          created_at?: string
+        }
+      }
       store_category_orders: {
         Row: {
           id: string

@@ -1,5 +1,6 @@
 export const NAV_ITEMS = [
   { to: '/', label: 'Lista', icon: '🛒' },
+  { to: '/recipes', label: 'Recept', icon: '📖' },
   { to: '/stores', label: 'Butiker', icon: '🏪' },
   { to: '/history', label: 'Historik', icon: '📋' },
   { to: '/settings', label: 'Inställningar', icon: '⚙️' },
