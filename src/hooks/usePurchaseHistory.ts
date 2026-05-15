@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PurchaseHistory, Suggestion } from '@/types'
@@ -18,6 +18,63 @@ export function usePurchaseHistory() {
       return (data ?? []) as PurchaseHistory[]
     },
     enabled: !!householdId,
+  })
+}
+
+export function useClearPurchaseHistory() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('purchase_history')
+        .delete()
+        .eq('household_id', householdId!)
+      if (error) throw error
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['purchase-history', householdId] })
+      const prev = queryClient.getQueryData<PurchaseHistory[]>(['purchase-history', householdId])
+      queryClient.setQueryData<PurchaseHistory[]>(['purchase-history', householdId], [])
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['purchase-history', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-history', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['suggestions', householdId] })
+    },
+  })
+}
+
+export function useDeletePurchaseHistoryItem() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('purchase_history')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['purchase-history', householdId] })
+      const prev = queryClient.getQueryData<PurchaseHistory[]>(['purchase-history', householdId])
+      queryClient.setQueryData<PurchaseHistory[]>(
+        ['purchase-history', householdId],
+        old => (old ?? []).filter(r => r.id !== id)
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['purchase-history', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-history', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['suggestions', householdId] })
+    },
   })
 }
 
