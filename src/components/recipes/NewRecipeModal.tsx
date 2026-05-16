@@ -8,7 +8,6 @@ import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
 import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { fileToCompressedDataUrl } from '@/lib/image'
 import { parseIngredientLine } from '@/lib/parseIngredient'
-import { clsx } from 'clsx'
 import type { RecipeWithIngredients } from '@/types'
 
 interface Props {
@@ -366,7 +365,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
         )}
 
-        <div className={clsx('flex gap-2 pt-2 border-t border-gray-100', error || parseError ? 'mt-0' : 'mt-2')}>
+        <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-white/95 backdrop-blur border-t border-gray-100 flex gap-2 mt-2">
           <Button type="button" variant="secondary" onClick={handleClose} className="flex-1">
             Avbryt
           </Button>

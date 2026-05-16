@@ -25,8 +25,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-fade-up" />
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 animate-fade-up border border-gray-200/60">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] bg-white rounded-3xl shadow-2xl animate-fade-up border border-gray-200/60 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 tracking-tight">{title}</h2>
           <button
             onClick={onClose}
@@ -37,7 +37,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             </svg>
           </button>
         </div>
-        {children}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+          {children}
+        </div>
       </div>
     </div>
   )
