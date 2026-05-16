@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { useParseRecipe } from '@/hooks/useParseRecipe'
+import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
 import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { fileToCompressedDataUrl } from '@/lib/image'
+import { parseIngredientLine } from '@/lib/parseIngredient'
 import { clsx } from 'clsx'
 import type { RecipeWithIngredients } from '@/types'
 
@@ -38,7 +40,10 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const [rows, setRows] = useState<Row[]>(() => rowsFromRecipe(recipe))
   const [error, setError] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
+  const [urlValue, setUrlValue] = useState('')
+  const [urlError, setUrlError] = useState<string | null>(null)
   const parseRecipe = useParseRecipe()
+  const importUrl = useImportRecipeUrl()
   const addRecipe = useAddRecipe()
   const updateRecipe = useUpdateRecipe()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -53,6 +58,8 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setRows(rowsFromRecipe(recipe))
     setError('')
     setParseError(null)
+    setUrlValue('')
+    setUrlError(null)
   }
 
   function handleClose() {
@@ -109,6 +116,43 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     }
   }
 
+  async function handleImportUrl() {
+    setUrlError(null)
+    const trimmed = urlValue.trim()
+    if (!trimmed) {
+      setUrlError('Klistra in en länk till receptet.')
+      return
+    }
+    try {
+      const imported = await importUrl.mutateAsync(trimmed)
+      // Replace name + servings only if they look unset (don't overwrite user typing).
+      if (!name.trim()) setName(imported.name)
+      if (imported.servings) setServings(imported.servings)
+
+      if (imported.ingredients.length > 0) {
+        const userRows = rows.filter(r => r.name.trim().length > 0)
+        const importedRows: Row[] = imported.ingredients.map(line => {
+          const parsed = parseIngredientLine(line)
+          return { name: parsed.name, quantity: parsed.quantity ?? '' }
+        })
+        const next = [...userRows, ...importedRows]
+        setRows(next.length > 0 ? next : [{ ...EMPTY_ROW }])
+      }
+
+      if (imported.instructions) {
+        setInstructions(prev => {
+          const current = prev.trim()
+          if (!current) return imported.instructions!
+          return `${current}\n\n${imported.instructions}`
+        })
+      }
+
+      setUrlValue('')
+    } catch (err) {
+      setUrlError(err instanceof Error ? err.message : 'Kunde inte importera receptet')
+    }
+  }
+
   async function handleSave() {
     setError('')
     const trimmedName = name.trim()
@@ -153,9 +197,51 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const parsing = parseRecipe.isPending
   const saving = addRecipe.isPending || updateRecipe.isPending
 
+  const importing = importUrl.isPending
+
   return (
     <Modal open={open} onClose={handleClose} title={editing ? 'Redigera recept' : 'Nytt recept'}>
       <div className="flex flex-col gap-3">
+        {!editing && (
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-emerald-700">
+              <span aria-hidden>🔗</span>
+              Importera från länk
+            </div>
+            <div className="flex gap-2 items-stretch">
+              <input
+                type="url"
+                inputMode="url"
+                value={urlValue}
+                onChange={e => setUrlValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleImportUrl()
+                  }
+                }}
+                placeholder="https://www.ica.se/recept/…"
+                className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleImportUrl}
+                loading={importing}
+                disabled={!urlValue.trim()}
+              >
+                Hämta
+              </Button>
+            </div>
+            {urlError && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{urlError}</p>
+            )}
+            <p className="text-[11px] text-gray-500">
+              Funkar för ICA, Köket, Allt om Mat och de flesta större receptsajter (schema.org/Recipe).
+            </p>
+          </div>
+        )}
+
         <Input
           label="Receptets namn"
           value={name}
