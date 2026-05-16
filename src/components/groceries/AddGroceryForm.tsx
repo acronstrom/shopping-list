@@ -36,7 +36,7 @@ export function AddGroceryForm() {
     try {
       const dataUrl = await fileToCompressedDataUrl(file)
       const parsed = await parseRecipe.mutateAsync(dataUrl)
-      setIngredients(parsed)
+      setIngredients(parsed.ingredients)
     } catch (err) {
       setRecipeError(err instanceof Error ? err.message : 'Kunde inte läsa receptet')
     } finally {

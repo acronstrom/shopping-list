@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
-import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
+import { useParseRecipe } from '@/hooks/useParseRecipe'
 import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { fileToCompressedDataUrl } from '@/lib/image'
 import { clsx } from 'clsx'
@@ -79,18 +79,31 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setParseError(null)
     try {
       const dataUrl = await fileToCompressedDataUrl(file)
-      const parsed: ParsedIngredient[] = await parseRecipe.mutateAsync(dataUrl)
-      if (parsed.length === 0) {
-        setParseError('Inga ingredienser hittades i bilden.')
+      const parsed = await parseRecipe.mutateAsync(dataUrl)
+      if (parsed.ingredients.length === 0 && !parsed.instructions) {
+        setParseError('Inget recept hittades i bilden.')
         return
       }
-      const userRows = rows.filter(r => r.name.trim().length > 0)
-      const parsedRows: Row[] = parsed.map(p => ({
-        name: p.name,
-        quantity: p.quantity ?? '',
-      }))
-      const next = [...userRows, ...parsedRows]
-      setRows(next.length > 0 ? next : [{ ...EMPTY_ROW }])
+
+      if (parsed.ingredients.length > 0) {
+        const userRows = rows.filter(r => r.name.trim().length > 0)
+        const parsedRows: Row[] = parsed.ingredients.map(p => ({
+          name: p.name,
+          quantity: p.quantity ?? '',
+        }))
+        const next = [...userRows, ...parsedRows]
+        setRows(next.length > 0 ? next : [{ ...EMPTY_ROW }])
+      }
+
+      if (parsed.instructions) {
+        // If the user has typed instructions already, append the parsed
+        // ones after a blank line so we don't blow their notes away.
+        setInstructions(prev => {
+          const current = prev.trim()
+          if (!current) return parsed.instructions!
+          return `${current}\n\n${parsed.instructions}`
+        })
+      }
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Kunde inte tolka receptet')
     }
