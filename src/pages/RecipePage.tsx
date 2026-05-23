@@ -8,9 +8,28 @@ import { useDeleteRecipe, useRecipe } from '@/hooks/useRecipes'
 import { useAddGroceriesBulk } from '@/hooks/useGroceries'
 import { scaleQuantity } from '@/lib/recipeScale'
 import { splitInstructions } from '@/lib/parseInstructions'
+import { dedupeIngredients } from '@/lib/parseIngredient'
 import { clsx } from 'clsx'
 
 type Mode = 'shop' | 'cook'
+
+interface ScaledIngredient {
+  id: string
+  name: string
+  scaledQuantity: string | null
+  section: string | null
+}
+
+interface ShopRow {
+  key: string
+  name: string
+  scaledQuantity: string | null
+}
+
+interface CookSectionGroup {
+  name: string
+  ingredients: ScaledIngredient[]
+}
 
 export function RecipePage() {
   const { id } = useParams<{ id: string }>()
@@ -26,29 +45,55 @@ export function RecipePage() {
   const [ingredientsDone, setIngredientsDone] = useState<Set<string>>(new Set())
   const [stepsDone, setStepsDone] = useState<Set<number>>(new Set())
   const [justAddedCount, setJustAddedCount] = useState(0)
-  const [mode, setMode] = useState<Mode>('shop')
+  const [mode, setMode] = useState<Mode>('cook')
 
   const servings = overrideServings ?? recipe?.servings ?? 4
   const factor = recipe ? servings / (recipe.servings || 1) : 1
-  const selectedCount = recipe
-    ? recipe.ingredients.filter(i => !skipped.has(i.id)).length
-    : 0
 
-  const scaledIngredients = useMemo(() => {
+  const scaledIngredients = useMemo<ScaledIngredient[]>(() => {
     if (!recipe) return []
     return recipe.ingredients.map(i => ({
-      ...i,
+      id: i.id,
+      name: i.name,
       scaledQuantity: scaleQuantity(i.quantity, factor),
+      section: i.section ?? null,
     }))
   }, [recipe, factor])
 
+  const cookSections = useMemo<CookSectionGroup[]>(() => {
+    const groups = new Map<string, ScaledIngredient[]>()
+    const order: string[] = []
+    for (const ing of scaledIngredients) {
+      const key = ing.section ?? ''
+      if (!groups.has(key)) {
+        groups.set(key, [])
+        order.push(key)
+      }
+      groups.get(key)!.push(ing)
+    }
+    return order.map(name => ({ name, ingredients: groups.get(name)! }))
+  }, [scaledIngredients])
+
+  const shopIngredients = useMemo<ShopRow[]>(() => {
+    const deduped = dedupeIngredients(
+      scaledIngredients.map(i => ({ name: i.name, quantity: i.scaledQuantity })),
+    )
+    return deduped.map(i => ({
+      key: i.name.trim().toLocaleLowerCase('sv'),
+      name: i.name,
+      scaledQuantity: i.quantity,
+    }))
+  }, [scaledIngredients])
+
+  const selectedCount = shopIngredients.filter(i => !skipped.has(i.key)).length
+
   const steps = useMemo(() => splitInstructions(recipe?.instructions), [recipe?.instructions])
 
-  function toggleSkipped(ingredientId: string) {
+  function toggleSkipped(key: string) {
     setSkipped(prev => {
       const next = new Set(prev)
-      if (next.has(ingredientId)) next.delete(ingredientId)
-      else next.add(ingredientId)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
@@ -73,8 +118,8 @@ export function RecipePage() {
 
   async function handleAddSelected() {
     if (!recipe) return
-    const items = scaledIngredients
-      .filter(i => !skipped.has(i.id))
+    const items = shopIngredients
+      .filter(i => !skipped.has(i.key))
       .map(i => ({ name: i.name, quantity: i.scaledQuantity ?? undefined }))
     if (items.length === 0) return
     try {
@@ -196,19 +241,19 @@ export function RecipePage() {
 
         {mode === 'shop' ? (
           <ShopSection
-            ingredients={scaledIngredients}
+            ingredients={shopIngredients}
             skipped={skipped}
             onToggle={toggleSkipped}
-            onClearSkipped={() => setSkipped(skipped.size > 0 ? new Set() : new Set(recipe.ingredients.map(i => i.id)))}
+            onClearSkipped={() => setSkipped(skipped.size > 0 ? new Set() : new Set(shopIngredients.map(i => i.key)))}
             onAdd={handleAddSelected}
             adding={addBulk.isPending}
             justAddedCount={justAddedCount}
             selectedCount={selectedCount}
-            totalCount={recipe.ingredients.length}
+            totalCount={shopIngredients.length}
           />
         ) : (
           <CookSection
-            ingredients={scaledIngredients}
+            sections={cookSections}
             ingredientsDone={ingredientsDone}
             onToggleIngredient={toggleIngredientDone}
             steps={steps}
@@ -268,9 +313,9 @@ export function RecipePage() {
 // ============================================================
 
 interface ShopSectionProps {
-  ingredients: Array<{ id: string; name: string; scaledQuantity: string | null }>
+  ingredients: ShopRow[]
   skipped: Set<string>
-  onToggle: (id: string) => void
+  onToggle: (key: string) => void
   onClearSkipped: () => void
   onAdd: () => void
   adding: boolean
@@ -309,14 +354,14 @@ function ShopSection({
       </p>
       <ul className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
         {ingredients.map(ing => {
-          const selected = !skipped.has(ing.id)
+          const selected = !skipped.has(ing.key)
           return (
-            <li key={ing.id}>
+            <li key={ing.key}>
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/80 transition-colors">
                 <input
                   type="checkbox"
                   checked={selected}
-                  onChange={() => onToggle(ing.id)}
+                  onChange={() => onToggle(ing.key)}
                   className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                 />
                 <span className={clsx('flex-1 min-w-0 text-sm truncate', selected ? 'text-gray-900' : 'text-gray-400 line-through')}>
@@ -357,7 +402,7 @@ function ShopSection({
 // ============================================================
 
 interface CookSectionProps {
-  ingredients: Array<{ id: string; name: string; scaledQuantity: string | null }>
+  sections: CookSectionGroup[]
   ingredientsDone: Set<string>
   onToggleIngredient: (id: string) => void
   steps: string[]
@@ -367,7 +412,7 @@ interface CookSectionProps {
 }
 
 function CookSection({
-  ingredients,
+  sections,
   ingredientsDone,
   onToggleIngredient,
   steps,
@@ -375,13 +420,15 @@ function CookSection({
   onToggleStep,
   onClearProgress,
 }: CookSectionProps) {
-  const progressTotal = ingredients.length + steps.length
+  const totalIngredients = sections.reduce((sum, s) => sum + s.ingredients.length, 0)
+  const progressTotal = totalIngredients + steps.length
   const progressDone = ingredientsDone.size + stepsDone.size
+  const hasNamedSections = sections.some(s => s.name.trim().length > 0)
 
   return (
     <>
-      <section>
-        <div className="flex items-center justify-between mb-2 px-1">
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between mb-1 px-1">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
             Ingredienser
           </h2>
@@ -395,44 +442,53 @@ function CookSection({
             </button>
           )}
         </div>
-        <ul className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
-          {ingredients.map(ing => {
-            const done = ingredientsDone.has(ing.id)
-            return (
-              <li key={ing.id}>
-                <button
-                  type="button"
-                  onClick={() => onToggleIngredient(ing.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
-                >
-                  <span
-                    className={clsx(
-                      'inline-flex w-5 h-5 rounded-full border-2 flex-shrink-0 items-center justify-center transition-all',
-                      done
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-gray-300 bg-white'
-                    )}
-                    aria-hidden
-                  >
-                    {done && (
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className={clsx('flex-1 min-w-0 text-base truncate', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
-                    {ing.name}
-                  </span>
-                  {ing.scaledQuantity && (
-                    <span className={clsx('text-sm font-medium tabular-nums whitespace-nowrap', done ? 'text-gray-300' : 'text-gray-700')}>
-                      {ing.scaledQuantity}
-                    </span>
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+        {sections.map((section, sIdx) => (
+          <div key={sIdx} className="flex flex-col gap-1.5">
+            {hasNamedSections && (
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+                {section.name.trim() || 'Huvudingredienser'}
+              </h3>
+            )}
+            <ul className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+              {section.ingredients.map(ing => {
+                const done = ingredientsDone.has(ing.id)
+                return (
+                  <li key={ing.id}>
+                    <button
+                      type="button"
+                      onClick={() => onToggleIngredient(ing.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
+                    >
+                      <span
+                        className={clsx(
+                          'inline-flex w-5 h-5 rounded-full border-2 flex-shrink-0 items-center justify-center transition-all',
+                          done
+                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                            : 'border-gray-300 bg-white'
+                        )}
+                        aria-hidden
+                      >
+                        {done && (
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className={clsx('flex-1 min-w-0 text-base truncate', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                        {ing.name}
+                      </span>
+                      {ing.scaledQuantity && (
+                        <span className={clsx('text-sm font-medium tabular-nums whitespace-nowrap', done ? 'text-gray-300' : 'text-gray-700')}>
+                          {ing.scaledQuantity}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
       </section>
 
       {steps.length > 0 ? (

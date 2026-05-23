@@ -6,6 +6,7 @@ import type { Recipe, RecipeIngredient, RecipeWithIngredients } from '@/types'
 export interface RecipeIngredientInput {
   name: string
   quantity?: string | null
+  section?: string | null
 }
 
 export function useRecipes() {
@@ -106,7 +107,11 @@ export function useAddRecipe() {
       if (recipeErr) throw recipeErr
 
       const cleaned = ingredients
-        .map(i => ({ name: i.name.trim(), quantity: i.quantity?.trim() || null }))
+        .map(i => ({
+          name: i.name.trim(),
+          quantity: i.quantity?.trim() || null,
+          section: i.section?.trim() || null,
+        }))
         .filter(i => i.name.length > 0)
 
       if (cleaned.length > 0) {
@@ -114,6 +119,7 @@ export function useAddRecipe() {
           recipe_id: (recipe as Recipe).id,
           name: i.name,
           quantity: i.quantity,
+          section: i.section,
           position: idx,
         }))
         const { error: ingErr } = await supabase.from('recipe_ingredients').insert(rows)
@@ -162,7 +168,11 @@ export function useUpdateRecipe() {
       if (delErr) throw delErr
 
       const cleaned = ingredients
-        .map(i => ({ name: i.name.trim(), quantity: i.quantity?.trim() || null }))
+        .map(i => ({
+          name: i.name.trim(),
+          quantity: i.quantity?.trim() || null,
+          section: i.section?.trim() || null,
+        }))
         .filter(i => i.name.length > 0)
 
       if (cleaned.length > 0) {
@@ -170,6 +180,7 @@ export function useUpdateRecipe() {
           recipe_id: id,
           name: i.name,
           quantity: i.quantity,
+          section: i.section,
           position: idx,
         }))
         const { error: ingErr } = await supabase.from('recipe_ingredients').insert(rows)

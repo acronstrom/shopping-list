@@ -270,6 +270,7 @@ export interface Database {
           recipe_id: string
           name: string
           quantity: string | null
+          section: string | null
           position: number
           created_at: string
         }
@@ -278,6 +279,7 @@ export interface Database {
           recipe_id: string
           name: string
           quantity?: string | null
+          section?: string | null
           position?: number
           created_at?: string
         }
@@ -286,6 +288,7 @@ export interface Database {
           recipe_id?: string
           name?: string
           quantity?: string | null
+          section?: string | null
           position?: number
           created_at?: string
         }

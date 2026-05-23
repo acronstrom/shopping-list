@@ -10,6 +10,7 @@ interface ParsedIngredient {
   name: string
   quantity: string | null
   category: string
+  section: string | null
 }
 
 serve(async (req: Request) => {
@@ -96,14 +97,17 @@ serve(async (req: Request) => {
             content: `Du extraherar ett recept från en bild. Receptet kan vara på svenska eller engelska. Översätt allt till svenska.
 
 Returnera ENDAST JSON i formatet:
-{ "ingredients": [ { "name": "...", "quantity": "...", "category": "..." } ], "instructions": "..." }
+{ "ingredients": [ { "name": "...", "quantity": "...", "category": "...", "section": "..." } ], "instructions": "..." }
 
 Ingredienser:
 - "name": ingrediensens namn på svenska i singular grundform, t.ex. "Mjöl", "Ägg", "Gul lök", "Kycklingfilé". Stor begynnelsebokstav. Inkludera inte mängd eller enhet i namnet.
 - "quantity": mängd och enhet som det står i receptet, t.ex. "3 dl", "2 st", "500 g", "1 msk". Om ingen mängd anges, använd null.
 - "category": EN av kategorierna nedan. Om varan inte tydligt passar, använd "Övrigt".
-- Hoppa över rubriker, salt/peppar "efter smak" och vatten.
+- "section": namnet på den delrubrik ingrediensen ligger under, t.ex. "Marinad", "Tomatsallad", "Tzatziki", "Grillat pitabröd", "Sås", "Topping". Behåll rubriken på originalspråket men anpassa till svenska om receptet är engelskt. Använd null om ingrediensen ligger i receptets huvudlista utan rubrik.
+- En "sektion" är en delrubrik som följs av en egen ingredienslista. Rena ingredienser utan föregående delrubrik (t.ex. "4 pers", "Pommes" direkt under titeln) hör inte till någon sektion.
+- Hoppa över rena rubriker, portionsangivelser ("4 pers"), salt/peppar "efter smak" och vatten.
 - Slå inte ihop olika ingredienser. Lista varje ingrediens på egen rad.
+- Behåll ingrediensernas inbördes ordning. Lista alla ingredienser från sektion A före sektion B osv.
 
 Instruktioner:
 - "instructions": de matlagningssteg som visas i receptet, översatta till svenska.
@@ -145,15 +149,17 @@ ${categories.join(", ")}`,
     const ingredients: ParsedIngredient[] = (parsed.ingredients ?? [])
       .map((item): ParsedIngredient | null => {
         if (!item || typeof item !== "object") return null
-        const row = item as { name?: unknown; quantity?: unknown; category?: unknown }
+        const row = item as { name?: unknown; quantity?: unknown; category?: unknown; section?: unknown }
         const name = typeof row.name === "string" ? row.name.trim() : ""
         if (!name) return null
         const quantityRaw = typeof row.quantity === "string" ? row.quantity.trim() : ""
         const categoryRaw = typeof row.category === "string" ? row.category : ""
+        const sectionRaw = typeof row.section === "string" ? row.section.trim() : ""
         return {
           name,
           quantity: quantityRaw || null,
           category: matchCategory(categoryRaw, categories),
+          section: sectionRaw || null,
         }
       })
       .filter((v): v is ParsedIngredient => v !== null)

@@ -2,6 +2,7 @@ import { useState, type FormEvent, useRef, type ChangeEvent } from 'react'
 import { useAddGrocery } from '@/hooks/useGroceries'
 import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
 import { fileToCompressedDataUrl } from '@/lib/image'
+import { dedupeIngredients } from '@/lib/parseIngredient'
 import { RecipeImportModal } from './RecipeImportModal'
 import { clsx } from 'clsx'
 
@@ -11,6 +12,7 @@ export function AddGroceryForm() {
   const [recipeOpen, setRecipeOpen] = useState(false)
   const [recipeError, setRecipeError] = useState<string | null>(null)
   const [ingredients, setIngredients] = useState<ParsedIngredient[]>([])
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const addGrocery = useAddGrocery()
   const parseRecipe = useParseRecipe()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -26,20 +28,27 @@ export function AddGroceryForm() {
   }
 
   async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
 
     setIngredients([])
     setRecipeError(null)
     setRecipeOpen(true)
+    setProgress({ current: 0, total: files.length })
 
     try {
-      const dataUrl = await fileToCompressedDataUrl(file)
-      const parsed = await parseRecipe.mutateAsync(dataUrl)
-      setIngredients(parsed.ingredients)
+      const all: ParsedIngredient[] = []
+      for (let i = 0; i < files.length; i++) {
+        setProgress({ current: i + 1, total: files.length })
+        const dataUrl = await fileToCompressedDataUrl(files[i])
+        const parsed = await parseRecipe.mutateAsync(dataUrl)
+        all.push(...parsed.ingredients)
+      }
+      setIngredients(dedupeIngredients(all))
     } catch (err) {
       setRecipeError(err instanceof Error ? err.message : 'Kunde inte läsa receptet')
     } finally {
+      setProgress(null)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
@@ -110,6 +119,7 @@ export function AddGroceryForm() {
           ref={fileRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleFileChange}
           className="hidden"
         />
@@ -117,6 +127,7 @@ export function AddGroceryForm() {
       <RecipeImportModal
         open={recipeOpen}
         loading={parseRecipe.isPending}
+        progress={progress}
         error={recipeError}
         ingredients={ingredients}
         onClose={handleRecipeClose}

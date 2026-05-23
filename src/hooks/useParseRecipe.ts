@@ -5,6 +5,7 @@ export interface ParsedIngredient {
   name: string
   quantity: string | null
   category: string
+  section: string | null
 }
 
 export interface ParsedRecipe {

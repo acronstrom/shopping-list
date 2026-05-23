@@ -9,6 +9,7 @@ import type { ParsedIngredient } from '@/hooks/useParseRecipe'
 interface RecipeImportModalProps {
   open: boolean
   loading: boolean
+  progress?: { current: number; total: number } | null
   error: string | null
   ingredients: ParsedIngredient[]
   onClose: () => void
@@ -22,6 +23,7 @@ interface Row extends ParsedIngredient {
 export function RecipeImportModal({
   open,
   loading,
+  progress,
   error,
   ingredients,
   onClose,
@@ -57,7 +59,11 @@ export function RecipeImportModal({
       {loading ? (
         <div className="py-10 flex flex-col items-center gap-3">
           <Spinner className="h-8 w-8" />
-          <p className="text-sm text-gray-600">Läser receptet…</p>
+          <p className="text-sm text-gray-600">
+            {progress && progress.total > 1
+              ? `Läser recept ${progress.current}/${progress.total}…`
+              : 'Läser receptet…'}
+          </p>
         </div>
       ) : error ? (
         <div className="py-6 flex flex-col items-center gap-3 text-center">
