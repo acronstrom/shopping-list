@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { InviteMemberForm } from '@/components/household/InviteMemberForm'
 import { HouseholdCategoriesSection } from '@/components/household/HouseholdCategoriesSection'
+import { HouseholdRecipeCategoriesSection } from '@/components/household/HouseholdRecipeCategoriesSection'
 import { useHouseholdMembers } from '@/hooks/useHousehold'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +25,8 @@ export function SettingsPage() {
       <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-6">
 
         <HouseholdCategoriesSection />
+
+        <HouseholdRecipeCategoriesSection />
 
         <section>
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">

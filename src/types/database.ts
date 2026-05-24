@@ -237,6 +237,7 @@ export interface Database {
           notes: string | null
           instructions: string | null
           servings: number
+          category: string | null
           created_by: string
           created_at: string
           updated_at: string
@@ -248,6 +249,7 @@ export interface Database {
           notes?: string | null
           instructions?: string | null
           servings?: number
+          category?: string | null
           created_by: string
           created_at?: string
           updated_at?: string
@@ -259,9 +261,33 @@ export interface Database {
           notes?: string | null
           instructions?: string | null
           servings?: number
+          category?: string | null
           created_by?: string
           created_at?: string
           updated_at?: string
+        }
+      }
+      household_recipe_categories: {
+        Row: {
+          id: string
+          household_id: string
+          name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          name: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
         }
       }
       recipe_ingredients: {

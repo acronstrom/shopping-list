@@ -51,7 +51,28 @@ export interface RecipeInput {
   name: string
   instructions?: string | null
   servings?: number
+  category?: string | null
   ingredients: RecipeIngredientInput[]
+}
+
+async function autoCategorize(
+  recipeName: string,
+  ingredientNames: string[],
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke<{ category?: string | null }>(
+      'categorize-recipe',
+      { body: { recipeName, ingredientNames } },
+    )
+    if (error) {
+      console.error('[useRecipes] categorize-recipe failed', error)
+      return null
+    }
+    return data?.category ?? null
+  } catch (err) {
+    console.error('[useRecipes] categorize-recipe threw', err)
+    return null
+  }
 }
 
 export function useRecipe(id: string | null) {
@@ -89,9 +110,11 @@ export function useAddRecipe() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, instructions, servings, ingredients }: RecipeInput) => {
+    mutationFn: async ({ name, instructions, servings, category, ingredients }: RecipeInput) => {
       const trimmedName = name.trim()
       if (!trimmedName) throw new Error('Receptet behöver ett namn')
+
+      const manualCategory = category?.trim() || null
 
       const { data: recipe, error: recipeErr } = await supabase
         .from('recipes')
@@ -100,6 +123,7 @@ export function useAddRecipe() {
           name: trimmedName,
           instructions: instructions?.trim() || null,
           servings: servings ?? 4,
+          category: manualCategory,
           created_by: user!.id,
         }])
         .select()
@@ -126,7 +150,21 @@ export function useAddRecipe() {
         if (ingErr) throw ingErr
       }
 
-      return recipe as Recipe
+      let finalRecipe = recipe as Recipe
+      if (!manualCategory) {
+        const aiCategory = await autoCategorize(trimmedName, cleaned.map(i => i.name))
+        if (aiCategory) {
+          const { data: updated, error: updErr } = await supabase
+            .from('recipes')
+            .update({ category: aiCategory })
+            .eq('id', finalRecipe.id)
+            .select()
+            .single()
+          if (!updErr && updated) finalRecipe = updated as Recipe
+        }
+      }
+
+      return finalRecipe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recipes', householdId] })
@@ -144,10 +182,13 @@ export function useUpdateRecipe() {
       name,
       instructions,
       servings,
+      category,
       ingredients,
     }: RecipeInput & { id: string }) => {
       const trimmedName = name.trim()
       if (!trimmedName) throw new Error('Receptet behöver ett namn')
+
+      const manualCategory = category?.trim() || null
 
       const { error: recipeErr } = await supabase
         .from('recipes')
@@ -155,6 +196,7 @@ export function useUpdateRecipe() {
           name: trimmedName,
           instructions: instructions?.trim() || null,
           servings: servings ?? 4,
+          category: manualCategory,
         })
         .eq('id', id)
       if (recipeErr) throw recipeErr
@@ -186,6 +228,35 @@ export function useUpdateRecipe() {
         const { error: ingErr } = await supabase.from('recipe_ingredients').insert(rows)
         if (ingErr) throw ingErr
       }
+
+      if (!manualCategory) {
+        const aiCategory = await autoCategorize(trimmedName, cleaned.map(i => i.name))
+        if (aiCategory) {
+          await supabase
+            .from('recipes')
+            .update({ category: aiCategory })
+            .eq('id', id)
+        }
+      }
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['recipes', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['recipe', vars.id] })
+    },
+  })
+}
+
+export function useSetRecipeCategory() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, category }: { id: string; category: string | null }) => {
+      const { error } = await supabase
+        .from('recipes')
+        .update({ category })
+        .eq('id', id)
+      if (error) throw error
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['recipes', householdId] })

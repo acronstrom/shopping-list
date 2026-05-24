@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
 import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
 import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
+import { useHouseholdRecipeCategories } from '@/hooks/useRecipeCategories'
 import { fileToCompressedDataUrl } from '@/lib/image'
 import { dedupeIngredientsBySection, parseIngredientLine } from '@/lib/parseIngredient'
 import type { RecipeWithIngredients } from '@/types'
@@ -97,7 +98,9 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const [name, setName] = useState(recipe?.name ?? '')
   const [instructions, setInstructions] = useState(recipe?.instructions ?? '')
   const [servings, setServings] = useState(recipe?.servings ?? DEFAULT_SERVINGS)
+  const [category, setCategory] = useState<string>(recipe?.category ?? '')
   const [sections, setSections] = useState<Section[]>(() => sectionsFromRecipe(recipe))
+  const { data: recipeCategories = [] } = useHouseholdRecipeCategories()
   const [error, setError] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
   const [parseProgress, setParseProgress] = useState<{ current: number; total: number } | null>(null)
@@ -115,6 +118,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setName(recipe?.name ?? '')
     setInstructions(recipe?.instructions ?? '')
     setServings(recipe?.servings ?? DEFAULT_SERVINGS)
+    setCategory(recipe?.category ?? '')
     setSections(sectionsFromRecipe(recipe))
     setError('')
     setParseError(null)
@@ -283,12 +287,14 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     }
     const cleanServings = Math.max(1, Math.min(99, Math.round(servings) || DEFAULT_SERVINGS))
     try {
+      const selectedCategory = category.trim() || null
       if (editing && recipe) {
         await updateRecipe.mutateAsync({
           id: recipe.id,
           name: trimmedName,
           instructions: instructions.trim() || null,
           servings: cleanServings,
+          category: selectedCategory,
           ingredients,
         })
         onSaved?.(recipe.id)
@@ -297,6 +303,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           name: trimmedName,
           instructions: instructions.trim() || null,
           servings: cleanServings,
+          category: selectedCategory,
           ingredients,
         })
         onSaved?.(saved.id)
@@ -367,7 +374,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           autoFocus={!editing}
         />
 
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1 w-32">
             <span className="text-sm font-medium text-gray-700">Portioner</span>
             <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -392,6 +399,23 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                 aria-label="Öka portioner"
               >+</button>
             </div>
+          </label>
+
+          <label className="flex flex-col gap-1 flex-1 min-w-[10rem]">
+            <span className="text-sm font-medium text-gray-700">Kategori</span>
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            >
+              <option value="">Automatiskt (AI gissar)</option>
+              {recipeCategories.map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+              {category && !recipeCategories.some(c => c.name === category) && (
+                <option value={category}>{category}</option>
+              )}
+            </select>
           </label>
         </div>
 
