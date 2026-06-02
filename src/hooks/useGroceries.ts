@@ -74,6 +74,7 @@ export function useAddGrocery() {
         note: note?.trim() || null,
         is_checked: false,
         added_by: user!.id,
+        meal_plan_entry_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
@@ -95,6 +96,7 @@ export interface BulkGroceryInput {
   name: string
   quantity?: string | null
   category?: string
+  meal_plan_entry_id?: string | null
 }
 
 export function useAddGroceriesBulk() {
@@ -109,6 +111,7 @@ export function useAddGroceriesBulk() {
         name: capitalizeFirst(item.name.trim()),
         category: item.category?.trim() || 'Övrigt',
         quantity: item.quantity?.trim() || null,
+        meal_plan_entry_id: item.meal_plan_entry_id ?? null,
         added_by: user!.id,
       }))
 
@@ -132,6 +135,7 @@ export function useAddGroceriesBulk() {
         note: null,
         is_checked: false,
         added_by: user!.id,
+        meal_plan_entry_id: item.meal_plan_entry_id ?? null,
         created_at: now,
         updated_at: now,
       }))

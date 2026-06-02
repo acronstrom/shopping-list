@@ -13,6 +13,8 @@ interface ImportedRecipe {
   instructions: string | null
   image: string | null
   sourceUrl: string
+  prepTimeMinutes: number | null
+  cookTimeMinutes: number | null
 }
 
 serve(async (req: Request) => {
@@ -172,8 +174,38 @@ function normalizeRecipe(recipe: Record<string, unknown>, sourceUrl: string): Im
 
   const instructions = normalizeInstructions(recipe.recipeInstructions)
   const image = normalizeImage(recipe.image)
+  const prepTimeMinutes = parseIsoDurationMinutes(recipe.prepTime)
+  const cookTimeMinutes = parseIsoDurationMinutes(recipe.cookTime)
+    ?? minutesMinusPrep(parseIsoDurationMinutes(recipe.totalTime), prepTimeMinutes)
 
-  return { name, servings, ingredients, instructions, image, sourceUrl }
+  return {
+    name,
+    servings,
+    ingredients,
+    instructions,
+    image,
+    sourceUrl,
+    prepTimeMinutes,
+    cookTimeMinutes,
+  }
+}
+
+// Schema.org uses ISO 8601 durations (e.g. "PT15M", "PT1H30M"). Hours
+// are folded into minutes; days are ignored (recipes don't list them).
+function parseIsoDurationMinutes(value: unknown): number | null {
+  if (typeof value !== "string") return null
+  const m = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?/i)
+  if (!m) return null
+  const hours = m[1] ? parseInt(m[1], 10) : 0
+  const minutes = m[2] ? parseInt(m[2], 10) : 0
+  const total = hours * 60 + minutes
+  return total > 0 ? total : null
+}
+
+function minutesMinusPrep(total: number | null, prep: number | null): number | null {
+  if (total === null) return null
+  if (prep === null) return total
+  return Math.max(0, total - prep) || null
 }
 
 function parseServings(value: unknown): number | null {

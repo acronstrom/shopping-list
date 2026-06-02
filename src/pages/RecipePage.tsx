@@ -4,11 +4,18 @@ import { Header } from '@/components/layout/Header'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { NewRecipeModal } from '@/components/recipes/NewRecipeModal'
-import { useDeleteRecipe, useRecipe } from '@/hooks/useRecipes'
+import {
+  useDeleteRecipe,
+  useRecipe,
+  useRecipeImageUrl,
+  useToggleRecipeFavorite,
+} from '@/hooks/useRecipes'
 import { useAddGroceriesBulk } from '@/hooks/useGroceries'
+import { useUpsertMealPlanEntry } from '@/hooks/useMealPlan'
 import { scaleQuantity } from '@/lib/recipeScale'
 import { splitInstructions } from '@/lib/parseInstructions'
 import { dedupeIngredients } from '@/lib/parseIngredient'
+import { toIsoDate } from '@/lib/week'
 import { clsx } from 'clsx'
 
 type Mode = 'shop' | 'cook'
@@ -37,6 +44,9 @@ export function RecipePage() {
   const { data: recipe, isLoading } = useRecipe(id ?? null)
   const addBulk = useAddGroceriesBulk()
   const deleteRecipe = useDeleteRecipe()
+  const toggleFavorite = useToggleRecipeFavorite()
+  const upsertPlanEntry = useUpsertMealPlanEntry()
+  const { data: heroImageUrl } = useRecipeImageUrl(recipe?.image_path)
 
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -46,6 +56,10 @@ export function RecipePage() {
   const [stepsDone, setStepsDone] = useState<Set<number>>(new Set())
   const [justAddedCount, setJustAddedCount] = useState(0)
   const [mode, setMode] = useState<Mode>('cook')
+  const [planDate, setPlanDate] = useState<string>(toIsoDate(new Date()))
+  const [planSavedAt, setPlanSavedAt] = useState<number | null>(null)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [showPlanPicker, setShowPlanPicker] = useState(false)
 
   const servings = overrideServings ?? recipe?.servings ?? 4
   const factor = recipe ? servings / (recipe.servings || 1) : 1
@@ -141,6 +155,22 @@ export function RecipePage() {
     }
   }
 
+  async function handleAddToPlan() {
+    if (!recipe) return
+    setPlanError(null)
+    try {
+      await upsertPlanEntry.mutateAsync({
+        recipeId: recipe.id,
+        plannedDate: planDate,
+      })
+      setPlanSavedAt(Date.now())
+      setShowPlanPicker(false)
+      window.setTimeout(() => setPlanSavedAt(null), 2000)
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : 'Kunde inte spara i veckoplanen')
+    }
+  }
+
   function handleClearProgress() {
     setIngredientsDone(new Set())
     setStepsDone(new Set())
@@ -210,32 +240,141 @@ export function RecipePage() {
           </div>
         </div>
 
-        <header className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight leading-tight">
-            {recipe.name}
-          </h1>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Portioner</p>
-              <p className="text-xs text-gray-400 mt-0.5">Receptet är skrivet för {recipe.servings}.</p>
+        <header className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          {heroImageUrl && (
+            <div className="w-full h-44 sm:h-56 bg-gray-100">
+              <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
             </div>
-            <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
+          )}
+          <div className="p-5 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <h1 className="flex-1 text-2xl font-semibold text-gray-900 tracking-tight leading-tight">
+                {recipe.name}
+              </h1>
               <button
                 type="button"
-                onClick={() => setOverrideServings(Math.max(1, servings - 1))}
-                className="px-3 text-gray-500 hover:bg-gray-50"
-                aria-label="Minska portioner"
-              >−</button>
-              <span className="px-4 py-2 text-base font-semibold text-gray-900 min-w-[3rem] text-center">
-                {servings}
-              </span>
-              <button
-                type="button"
-                onClick={() => setOverrideServings(Math.min(99, servings + 1))}
-                className="px-3 text-gray-500 hover:bg-gray-50"
-                aria-label="Öka portioner"
-              >+</button>
+                onClick={() => toggleFavorite.mutate({ id: recipe.id, is_favorite: !recipe.is_favorite })}
+                aria-pressed={recipe.is_favorite}
+                aria-label={recipe.is_favorite ? 'Ta bort favorit' : 'Markera som favorit'}
+                className={clsx(
+                  'p-2 rounded-xl transition-colors text-xl leading-none',
+                  recipe.is_favorite
+                    ? 'text-rose-500 hover:bg-rose-50'
+                    : 'text-gray-300 hover:text-rose-400 hover:bg-gray-50',
+                )}
+              >
+                {recipe.is_favorite ? '♥' : '♡'}
+              </button>
             </div>
+
+            {(recipe.prep_time_minutes || recipe.cook_time_minutes || recipe.difficulty || recipe.rating) && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {recipe.prep_time_minutes ? (
+                  <Pill label={`Förb. ${recipe.prep_time_minutes} min`} />
+                ) : null}
+                {recipe.cook_time_minutes ? (
+                  <Pill label={`Tillagn. ${recipe.cook_time_minutes} min`} />
+                ) : null}
+                {recipe.difficulty && (
+                  <Pill label={recipe.difficulty} className="capitalize bg-emerald-50 text-emerald-700" />
+                )}
+                {recipe.rating !== null && recipe.rating > 0 && (
+                  <Pill
+                    label={'★'.repeat(recipe.rating) + '☆'.repeat(5 - recipe.rating)}
+                    className="bg-amber-50 text-amber-700 tracking-tight"
+                  />
+                )}
+              </div>
+            )}
+
+            {recipe.tags && recipe.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {recipe.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="text-[11px] font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Portioner</p>
+                <p className="text-xs text-gray-400 mt-0.5">Receptet är skrivet för {recipe.servings}.</p>
+              </div>
+              <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOverrideServings(Math.max(1, servings - 1))}
+                  className="px-3 text-gray-500 hover:bg-gray-50"
+                  aria-label="Minska portioner"
+                >−</button>
+                <span className="px-4 py-2 text-base font-semibold text-gray-900 min-w-[3rem] text-center">
+                  {servings}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOverrideServings(Math.min(99, servings + 1))}
+                  className="px-3 text-gray-500 hover:bg-gray-50"
+                  aria-label="Öka portioner"
+                >+</button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              {showPlanPicker ? (
+                <div className="flex items-center gap-2 w-full flex-wrap">
+                  <input
+                    type="date"
+                    value={planDate}
+                    onChange={e => setPlanDate(e.target.value)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddToPlan}
+                    loading={upsertPlanEntry.isPending}
+                  >
+                    Spara
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowPlanPicker(false)}
+                  >
+                    Avbryt
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowPlanPicker(true)}
+                >
+                  <span aria-hidden className="mr-1.5">📅</span>
+                  {planSavedAt ? 'Tillagd i veckoplan' : 'Lägg till i veckoplan'}
+                </Button>
+              )}
+              {recipe.source_url && (
+                <a
+                  href={recipe.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-gray-500 hover:text-emerald-600 underline underline-offset-2"
+                >
+                  Källa ↗
+                </a>
+              )}
+            </div>
+            {planError && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{planError}</p>
+            )}
           </div>
         </header>
 
@@ -305,6 +444,19 @@ export function RecipePage() {
         onClose={() => setEditing(false)}
       />
     </div>
+  )
+}
+
+function Pill({ label, className }: { label: string; className?: string }) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-full px-2.5 py-0.5 font-medium bg-gray-100 text-gray-600',
+        className,
+      )}
+    >
+      {label}
+    </span>
   )
 }
 

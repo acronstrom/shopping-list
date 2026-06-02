@@ -136,6 +136,7 @@ export interface Database {
           note: string | null
           is_checked: boolean
           added_by: string
+          meal_plan_entry_id: string | null
           created_at: string
           updated_at: string
         }
@@ -148,6 +149,7 @@ export interface Database {
           note?: string | null
           is_checked?: boolean
           added_by: string
+          meal_plan_entry_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -160,6 +162,7 @@ export interface Database {
           note?: string | null
           is_checked?: boolean
           added_by?: string
+          meal_plan_entry_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -238,6 +241,14 @@ export interface Database {
           instructions: string | null
           servings: number
           category: string | null
+          image_path: string | null
+          source_url: string | null
+          prep_time_minutes: number | null
+          cook_time_minutes: number | null
+          difficulty: 'enkel' | 'medel' | 'svår' | null
+          rating: number | null
+          tags: string[]
+          is_favorite: boolean
           created_by: string
           created_at: string
           updated_at: string
@@ -250,6 +261,14 @@ export interface Database {
           instructions?: string | null
           servings?: number
           category?: string | null
+          image_path?: string | null
+          source_url?: string | null
+          prep_time_minutes?: number | null
+          cook_time_minutes?: number | null
+          difficulty?: 'enkel' | 'medel' | 'svår' | null
+          rating?: number | null
+          tags?: string[]
+          is_favorite?: boolean
           created_by: string
           created_at?: string
           updated_at?: string
@@ -262,7 +281,53 @@ export interface Database {
           instructions?: string | null
           servings?: number
           category?: string | null
+          image_path?: string | null
+          source_url?: string | null
+          prep_time_minutes?: number | null
+          cook_time_minutes?: number | null
+          difficulty?: 'enkel' | 'medel' | 'svår' | null
+          rating?: number | null
+          tags?: string[]
+          is_favorite?: boolean
           created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      meal_plan_entries: {
+        Row: {
+          id: string
+          household_id: string
+          recipe_id: string
+          planned_date: string
+          servings_override: number | null
+          status: 'planned' | 'cooked' | 'skipped'
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          recipe_id: string
+          planned_date: string
+          servings_override?: number | null
+          status?: 'planned' | 'cooked' | 'skipped'
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          recipe_id?: string
+          planned_date?: string
+          servings_override?: number | null
+          status?: 'planned' | 'cooked' | 'skipped'
+          notes?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { getRecipeImageUrl } from '@/lib/recipeImage'
 import type { Recipe, RecipeIngredient, RecipeWithIngredients } from '@/types'
 
 export interface RecipeIngredientInput {
@@ -52,7 +53,28 @@ export interface RecipeInput {
   instructions?: string | null
   servings?: number
   category?: string | null
+  image_path?: string | null
+  source_url?: string | null
+  prep_time_minutes?: number | null
+  cook_time_minutes?: number | null
+  difficulty?: 'enkel' | 'medel' | 'svår' | null
+  rating?: number | null
+  tags?: string[]
+  is_favorite?: boolean
   ingredients: RecipeIngredientInput[]
+}
+
+function cleanRecipeFields(input: RecipeInput) {
+  return {
+    image_path: input.image_path ?? null,
+    source_url: input.source_url?.trim() || null,
+    prep_time_minutes: input.prep_time_minutes ?? null,
+    cook_time_minutes: input.cook_time_minutes ?? null,
+    difficulty: input.difficulty ?? null,
+    rating: input.rating ?? null,
+    tags: (input.tags ?? []).map(t => t.trim()).filter(Boolean),
+    is_favorite: input.is_favorite ?? false,
+  }
 }
 
 async function autoCategorize(
@@ -110,11 +132,13 @@ export function useAddRecipe() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, instructions, servings, category, ingredients }: RecipeInput) => {
+    mutationFn: async (input: RecipeInput) => {
+      const { name, instructions, servings, category, ingredients } = input
       const trimmedName = name.trim()
       if (!trimmedName) throw new Error('Receptet behöver ett namn')
 
       const manualCategory = category?.trim() || null
+      const extra = cleanRecipeFields(input)
 
       const { data: recipe, error: recipeErr } = await supabase
         .from('recipes')
@@ -124,6 +148,7 @@ export function useAddRecipe() {
           instructions: instructions?.trim() || null,
           servings: servings ?? 4,
           category: manualCategory,
+          ...extra,
           created_by: user!.id,
         }])
         .select()
@@ -177,18 +202,13 @@ export function useUpdateRecipe() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      name,
-      instructions,
-      servings,
-      category,
-      ingredients,
-    }: RecipeInput & { id: string }) => {
+    mutationFn: async (input: RecipeInput & { id: string }) => {
+      const { id, name, instructions, servings, category, ingredients } = input
       const trimmedName = name.trim()
       if (!trimmedName) throw new Error('Receptet behöver ett namn')
 
       const manualCategory = category?.trim() || null
+      const extra = cleanRecipeFields(input)
 
       const { error: recipeErr } = await supabase
         .from('recipes')
@@ -197,6 +217,7 @@ export function useUpdateRecipe() {
           instructions: instructions?.trim() || null,
           servings: servings ?? 4,
           category: manualCategory,
+          ...extra,
         })
         .eq('id', id)
       if (recipeErr) throw recipeErr
@@ -262,6 +283,54 @@ export function useSetRecipeCategory() {
       queryClient.invalidateQueries({ queryKey: ['recipes', householdId] })
       queryClient.invalidateQueries({ queryKey: ['recipe', vars.id] })
     },
+  })
+}
+
+export function useToggleRecipeFavorite() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, is_favorite }: { id: string; is_favorite: boolean }) => {
+      const { error } = await supabase
+        .from('recipes')
+        .update({ is_favorite })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onMutate: async ({ id, is_favorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['recipes', householdId] })
+      const prev = queryClient.getQueryData<RecipeWithIngredients[]>(['recipes', householdId])
+      queryClient.setQueryData<RecipeWithIngredients[]>(
+        ['recipes', householdId],
+        old => (old ?? []).map(r => (r.id === id ? { ...r, is_favorite } : r)),
+      )
+      const prevSingle = queryClient.getQueryData<RecipeWithIngredients | null>(['recipe', id])
+      if (prevSingle) {
+        queryClient.setQueryData<RecipeWithIngredients | null>(
+          ['recipe', id],
+          { ...prevSingle, is_favorite },
+        )
+      }
+      return { prev, prevSingle }
+    },
+    onError: (_err, vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['recipes', householdId], ctx.prev)
+      if (ctx?.prevSingle !== undefined) queryClient.setQueryData(['recipe', vars.id], ctx.prevSingle)
+    },
+    onSettled: (_data, _err, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['recipes', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['recipe', vars.id] })
+    },
+  })
+}
+
+export function useRecipeImageUrl(imagePath: string | null | undefined) {
+  return useQuery({
+    queryKey: ['recipe-image-url', imagePath],
+    queryFn: () => getRecipeImageUrl(imagePath ?? null),
+    enabled: !!imagePath,
+    staleTime: 50 * 60 * 1000,
   })
 }
 

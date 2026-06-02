@@ -5,11 +5,16 @@ import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
 import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
-import { useAddRecipe, useUpdateRecipe, type RecipeIngredientInput } from '@/hooks/useRecipes'
+import { useAddRecipe, useUpdateRecipe, useRecipeImageUrl, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { useHouseholdRecipeCategories } from '@/hooks/useRecipeCategories'
+import { useAuth } from '@/contexts/AuthContext'
 import { fileToCompressedDataUrl } from '@/lib/image'
+import { uploadRecipeImage } from '@/lib/recipeImage'
 import { dedupeIngredientsBySection, parseIngredientLine } from '@/lib/parseIngredient'
 import type { RecipeWithIngredients } from '@/types'
+
+type Difficulty = 'enkel' | 'medel' | 'svår'
+const DIFFICULTIES: Difficulty[] = ['enkel', 'medel', 'svår']
 
 interface Props {
   open: boolean
@@ -94,12 +99,26 @@ function applyParsedToSections(current: Section[], parsed: ParsedIngredient[]): 
 
 export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const editing = !!recipe
+  const { householdId } = useAuth()
   const [seededFor, setSeededFor] = useState<string | null>(null)
   const [name, setName] = useState(recipe?.name ?? '')
   const [instructions, setInstructions] = useState(recipe?.instructions ?? '')
   const [servings, setServings] = useState(recipe?.servings ?? DEFAULT_SERVINGS)
   const [category, setCategory] = useState<string>(recipe?.category ?? '')
   const [sections, setSections] = useState<Section[]>(() => sectionsFromRecipe(recipe))
+  const [imagePath, setImagePath] = useState<string | null>(recipe?.image_path ?? null)
+  const [pendingImageDataUrl, setPendingImageDataUrl] = useState<string | null>(null)
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [imageUploading, setImageUploading] = useState(false)
+  const [sourceUrl, setSourceUrl] = useState<string>(recipe?.source_url ?? '')
+  const [prepTime, setPrepTime] = useState<string>(recipe?.prep_time_minutes?.toString() ?? '')
+  const [cookTime, setCookTime] = useState<string>(recipe?.cook_time_minutes?.toString() ?? '')
+  const [difficulty, setDifficulty] = useState<Difficulty | ''>(recipe?.difficulty ?? '')
+  const [rating, setRating] = useState<number | null>(recipe?.rating ?? null)
+  const [isFavorite, setIsFavorite] = useState<boolean>(recipe?.is_favorite ?? false)
+  const [tagsInput, setTagsInput] = useState<string>((recipe?.tags ?? []).join(', '))
+  const { data: existingImageUrl } = useRecipeImageUrl(imagePath)
   const { data: recipeCategories = [] } = useHouseholdRecipeCategories()
   const [error, setError] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
@@ -111,6 +130,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const addRecipe = useAddRecipe()
   const updateRecipe = useUpdateRecipe()
   const fileRef = useRef<HTMLInputElement>(null)
+  const imageFileRef = useRef<HTMLInputElement>(null)
 
   const seedKey = open ? (recipe?.id ?? 'new') : null
   if (seedKey !== seededFor) {
@@ -120,12 +140,26 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setServings(recipe?.servings ?? DEFAULT_SERVINGS)
     setCategory(recipe?.category ?? '')
     setSections(sectionsFromRecipe(recipe))
+    setImagePath(recipe?.image_path ?? null)
+    setPendingImageDataUrl(null)
+    setPendingImageFile(null)
+    setImageError(null)
+    setImageUploading(false)
+    setSourceUrl(recipe?.source_url ?? '')
+    setPrepTime(recipe?.prep_time_minutes?.toString() ?? '')
+    setCookTime(recipe?.cook_time_minutes?.toString() ?? '')
+    setDifficulty(recipe?.difficulty ?? '')
+    setRating(recipe?.rating ?? null)
+    setIsFavorite(recipe?.is_favorite ?? false)
+    setTagsInput((recipe?.tags ?? []).join(', '))
     setError('')
     setParseError(null)
     setParseProgress(null)
     setUrlValue('')
     setUrlError(null)
   }
+
+  const previewImageUrl = pendingImageDataUrl ?? existingImageUrl ?? null
 
   function handleClose() {
     onClose()
@@ -233,6 +267,17 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
       const imported = await importUrl.mutateAsync(trimmed)
       if (!name.trim()) setName(imported.name)
       if (imported.servings) setServings(imported.servings)
+      if (imported.sourceUrl && !sourceUrl.trim()) setSourceUrl(imported.sourceUrl)
+      if (imported.image && !pendingImageDataUrl && !imagePath) {
+        setPendingImageDataUrl(imported.image)
+        setPendingImageFile(null)
+      }
+      if (imported.prepTimeMinutes && !prepTime) {
+        setPrepTime(imported.prepTimeMinutes.toString())
+      }
+      if (imported.cookTimeMinutes && !cookTime) {
+        setCookTime(imported.cookTimeMinutes.toString())
+      }
 
       if (imported.ingredients.length > 0) {
         const parsedRows: ParsedIngredient[] = imported.ingredients.map(line => {
@@ -261,6 +306,27 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     }
   }
 
+  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (imageFileRef.current) imageFileRef.current.value = ''
+    if (!file) return
+    setImageError(null)
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file)
+      setPendingImageDataUrl(dataUrl)
+      setPendingImageFile(file)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Kunde inte läsa bilden')
+    }
+  }
+
+  function clearImage() {
+    setPendingImageDataUrl(null)
+    setPendingImageFile(null)
+    setImagePath(null)
+    setImageError(null)
+  }
+
   async function handleSave() {
     setError('')
     const trimmedName = name.trim()
@@ -286,9 +352,25 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
       return
     }
     const cleanServings = Math.max(1, Math.min(99, Math.round(servings) || DEFAULT_SERVINGS))
+    const trimmedSource = sourceUrl.trim() || null
+    const prepValue = prepTime.trim() ? Math.max(0, Math.round(Number(prepTime))) || null : null
+    const cookValue = cookTime.trim() ? Math.max(0, Math.round(Number(cookTime))) || null : null
+    const cleanTags = tagsInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
     try {
       const selectedCategory = category.trim() || null
       if (editing && recipe) {
+        let finalImagePath = imagePath
+        if (pendingImageFile && householdId) {
+          setImageUploading(true)
+          finalImagePath = await uploadRecipeImage({
+            file: pendingImageFile,
+            householdId,
+            recipeId: recipe.id,
+          })
+        }
         await updateRecipe.mutateAsync({
           id: recipe.id,
           name: trimmedName,
@@ -296,6 +378,14 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           servings: cleanServings,
           category: selectedCategory,
           ingredients,
+          image_path: finalImagePath,
+          source_url: trimmedSource,
+          prep_time_minutes: prepValue,
+          cook_time_minutes: cookValue,
+          difficulty: difficulty || null,
+          rating,
+          tags: cleanTags,
+          is_favorite: isFavorite,
         })
         onSaved?.(recipe.id)
       } else {
@@ -305,12 +395,50 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           servings: cleanServings,
           category: selectedCategory,
           ingredients,
+          image_path: null,
+          source_url: trimmedSource,
+          prep_time_minutes: prepValue,
+          cook_time_minutes: cookValue,
+          difficulty: difficulty || null,
+          rating,
+          tags: cleanTags,
+          is_favorite: isFavorite,
         })
+        if (pendingImageFile && householdId) {
+          try {
+            setImageUploading(true)
+            const path = await uploadRecipeImage({
+              file: pendingImageFile,
+              householdId,
+              recipeId: saved.id,
+            })
+            await updateRecipe.mutateAsync({
+              id: saved.id,
+              name: trimmedName,
+              instructions: instructions.trim() || null,
+              servings: cleanServings,
+              category: selectedCategory,
+              ingredients,
+              image_path: path,
+              source_url: trimmedSource,
+              prep_time_minutes: prepValue,
+              cook_time_minutes: cookValue,
+              difficulty: difficulty || null,
+              rating,
+              tags: cleanTags,
+              is_favorite: isFavorite,
+            })
+          } catch (uploadErr) {
+            console.error('[NewRecipeModal] image upload failed', uploadErr)
+          }
+        }
         onSaved?.(saved.id)
       }
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Det gick inte att spara receptet')
+    } finally {
+      setImageUploading(false)
     }
   }
 
@@ -366,6 +494,56 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           </div>
         )}
 
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bild</span>
+            {previewImageUrl && (
+              <button
+                type="button"
+                onClick={clearImage}
+                className="text-xs font-medium text-gray-400 hover:text-red-500"
+              >
+                Ta bort
+              </button>
+            )}
+          </div>
+          {previewImageUrl ? (
+            <button
+              type="button"
+              onClick={() => imageFileRef.current?.click()}
+              className="relative h-32 w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50 group"
+            >
+              <img
+                src={previewImageUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium">
+                Byt bild
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => imageFileRef.current?.click()}
+              className="h-32 w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-1 text-gray-500"
+            >
+              <span aria-hidden className="text-2xl">📷</span>
+              <span className="text-xs font-medium">Lägg till bild</span>
+            </button>
+          )}
+          <input
+            ref={imageFileRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="hidden"
+          />
+          {imageError && (
+            <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{imageError}</p>
+          )}
+        </div>
+
         <Input
           label="Receptets namn"
           value={name}
@@ -418,6 +596,127 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             </select>
           </label>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Förberedelse (min)
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={prepTime}
+              onChange={e => setPrepTime(e.target.value)}
+              placeholder="—"
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Tillagning (min)
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={cookTime}
+              onChange={e => setCookTime(e.target.value)}
+              placeholder="—"
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            />
+          </label>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Svårighet
+            </span>
+            <div className="flex rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setDifficulty('')}
+                className={`px-3 py-1.5 text-xs font-medium ${
+                  difficulty === '' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                —
+              </button>
+              {DIFFICULTIES.map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDifficulty(d)}
+                  className={`px-3 py-1.5 text-xs font-medium capitalize ${
+                    difficulty === d ? 'bg-emerald-100 text-emerald-800' : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Betyg</span>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(prev => (prev === n ? null : n))}
+                  aria-label={`Sätt betyg ${n}`}
+                  className={`text-lg leading-none ${
+                    rating !== null && n <= rating ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'
+                  }`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsFavorite(v => !v)}
+            className={`mt-5 inline-flex items-center gap-1 text-sm font-medium ${
+              isFavorite ? 'text-rose-500' : 'text-gray-400 hover:text-rose-400'
+            }`}
+            aria-pressed={isFavorite}
+          >
+            <span aria-hidden>{isFavorite ? '♥' : '♡'}</span>
+            Favorit
+          </button>
+        </div>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Taggar
+          </span>
+          <input
+            type="text"
+            value={tagsInput}
+            onChange={e => setTagsInput(e.target.value)}
+            placeholder="t.ex. snabbt, vego, barnvänligt"
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+          <span className="text-[11px] text-gray-400">Separera med komma.</span>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Källa
+          </span>
+          <input
+            type="url"
+            inputMode="url"
+            value={sourceUrl}
+            onChange={e => setSourceUrl(e.target.value)}
+            placeholder="https://…"
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </label>
 
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -558,7 +857,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           <Button
             type="button"
             onClick={handleSave}
-            loading={saving}
+            loading={saving || imageUploading}
             disabled={!name.trim() || ingredientCount === 0}
             className="flex-1"
           >

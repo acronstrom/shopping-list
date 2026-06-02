@@ -8,6 +8,8 @@ export interface ImportedRecipe {
   instructions: string | null
   image: string | null
   sourceUrl: string
+  prepTimeMinutes: number | null
+  cookTimeMinutes: number | null
 }
 
 interface ImportRecipeResponse extends Partial<ImportedRecipe> {
@@ -31,6 +33,8 @@ export function useImportRecipeUrl() {
         instructions: data.instructions ?? null,
         image: data.image ?? null,
         sourceUrl: data.sourceUrl ?? url,
+        prepTimeMinutes: data.prepTimeMinutes ?? null,
+        cookTimeMinutes: data.cookTimeMinutes ?? null,
       }
     },
   })

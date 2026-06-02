@@ -11,6 +11,7 @@ import { ShoppingListPage } from '@/pages/ShoppingListPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { RecipesPage } from '@/pages/RecipesPage'
 import { RecipePage } from '@/pages/RecipePage'
+import { MealPlanPage } from '@/pages/MealPlanPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -25,6 +26,7 @@ function AppRoutes() {
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<ShoppingListPage />} />
+          <Route path="/plan" element={<MealPlanPage />} />
           <Route path="/recipes" element={<RecipesPage />} />
           <Route path="/recipes/:id" element={<RecipePage />} />
           <Route path="/stores" element={<StoresPage />} />

@@ -12,9 +12,14 @@ export type StoreCategoryOrder = Database['public']['Tables']['store_category_or
 export type StoreOffer = Database['public']['Tables']['store_offers']['Row']
 export type Recipe = Database['public']['Tables']['recipes']['Row']
 export type RecipeIngredient = Database['public']['Tables']['recipe_ingredients']['Row']
+export type MealPlanEntry = Database['public']['Tables']['meal_plan_entries']['Row']
 
 export interface RecipeWithIngredients extends Recipe {
   ingredients: RecipeIngredient[]
+}
+
+export interface MealPlanEntryWithRecipe extends MealPlanEntry {
+  recipe: Recipe
 }
 
 export type GroceryItemInsert = Database['public']['Tables']['grocery_items']['Insert']

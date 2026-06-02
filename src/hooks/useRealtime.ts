@@ -36,6 +36,18 @@ export function useRealtime() {
           queryClient.invalidateQueries({ queryKey: ['household-members', householdId] })
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'meal_plan_entries',
+          filter: `household_id=eq.${householdId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['meal-plan', householdId] })
+        }
+      )
       .subscribe()
 
     return () => {
