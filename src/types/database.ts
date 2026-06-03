@@ -384,6 +384,79 @@ export interface Database {
           created_at?: string
         }
       }
+      household_msft_todo_connections: {
+        Row: {
+          id: string
+          household_id: string
+          connected_by: string
+          connected_email: string
+          access_token: string
+          refresh_token: string
+          expires_at: string
+          list_id: string | null
+          list_name: string | null
+          last_synced_at: string | null
+          last_sync_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          connected_by: string
+          connected_email: string
+          access_token: string
+          refresh_token: string
+          expires_at: string
+          list_id?: string | null
+          list_name?: string | null
+          last_synced_at?: string | null
+          last_sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          connected_by?: string
+          connected_email?: string
+          access_token?: string
+          refresh_token?: string
+          expires_at?: string
+          list_id?: string | null
+          list_name?: string | null
+          last_synced_at?: string | null
+          last_sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      msft_todo_task_links: {
+        Row: {
+          id: string
+          household_id: string
+          msft_task_id: string
+          grocery_item_id: string | null
+          last_seen_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          msft_task_id: string
+          grocery_item_id?: string | null
+          last_seen_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          msft_task_id?: string
+          grocery_item_id?: string | null
+          last_seen_at?: string
+          created_at?: string
+        }
+      }
       store_category_orders: {
         Row: {
           id: string

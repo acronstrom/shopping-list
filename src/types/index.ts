@@ -14,6 +14,12 @@ export type Recipe = Database['public']['Tables']['recipes']['Row']
 export type RecipeIngredient = Database['public']['Tables']['recipe_ingredients']['Row']
 export type MealPlanEntry = Database['public']['Tables']['meal_plan_entries']['Row']
 
+type MsftTodoConnectionRow = Database['public']['Tables']['household_msft_todo_connections']['Row']
+export type MsftTodoConnectionSummary = Pick<
+  MsftTodoConnectionRow,
+  'id' | 'connected_email' | 'list_id' | 'list_name' | 'last_synced_at' | 'last_sync_error'
+>
+
 export interface RecipeWithIngredients extends Recipe {
   ingredients: RecipeIngredient[]
 }

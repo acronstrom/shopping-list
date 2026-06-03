@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { InviteMemberForm } from '@/components/household/InviteMemberForm'
 import { HouseholdCategoriesSection } from '@/components/household/HouseholdCategoriesSection'
 import { HouseholdRecipeCategoriesSection } from '@/components/household/HouseholdRecipeCategoriesSection'
+import { MicrosoftTodoSection } from '@/components/settings/MicrosoftTodoSection'
 import { useHouseholdMembers } from '@/hooks/useHousehold'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -13,6 +15,25 @@ export function SettingsPage() {
   const { user } = useAuth()
   const { data: members = [], isLoading } = useHouseholdMembers()
   const [signingOut, setSigningOut] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [msftFlash, setMsftFlash] = useState<{ status: 'ok' | 'error'; reason?: string } | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const msft = params.get('msft')
+    if (msft === 'ok' || msft === 'error') {
+      return { status: msft, reason: params.get('reason') ?? undefined }
+    }
+    return null
+  })
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (!params.has('msft') && !params.has('reason')) return
+    params.delete('msft')
+    params.delete('reason')
+    const next = params.toString()
+    navigate(next ? `${location.pathname}?${next}` : location.pathname, { replace: true })
+  }, [location.search, location.pathname, navigate])
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -27,6 +48,11 @@ export function SettingsPage() {
         <HouseholdCategoriesSection />
 
         <HouseholdRecipeCategoriesSection />
+
+        <MicrosoftTodoSection
+          flash={msftFlash}
+          onDismissFlash={() => setMsftFlash(null)}
+        />
 
         <section>
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">

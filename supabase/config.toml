@@ -1,0 +1,11 @@
+# Supabase project config. Only function-level overrides live here today.
+# Function-specific JWT verification: Microsoft's OAuth callback redirects
+# directly to msft-todo-callback with no auth header, and pg_cron pings
+# msft-todo-cron-sync the same way. Both verify a shared secret in-handler
+# instead of relying on the Supabase platform JWT check.
+
+[functions.msft-todo-callback]
+verify_jwt = false
+
+[functions.msft-todo-cron-sync]
+verify_jwt = false
