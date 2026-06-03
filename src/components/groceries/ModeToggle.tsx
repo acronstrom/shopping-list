@@ -1,40 +1,40 @@
-import { useUI, type ListMode } from '@/contexts/UIContext'
+import { useUI } from '@/contexts/UIContext'
+import { Cart } from '@/lib/icons'
 import { clsx } from 'clsx'
-
-const OPTIONS: { value: ListMode; label: string; icon: string }[] = [
-  { value: 'edit', label: 'Redigera', icon: '✏️' },
-  { value: 'shopping', label: 'Handla', icon: '🛒' },
-]
 
 export function ModeToggle() {
   const { mode, setMode } = useUI()
 
   return (
     <div
-      className="inline-flex rounded-full bg-gray-100/80 p-1 self-start border border-gray-200/60"
+      className="inline-flex self-start gap-0.5 rounded-full bg-surface-2 border border-hair p-[3px]"
       role="tablist"
       aria-label="Läge"
     >
-      {OPTIONS.map(opt => {
-        const active = mode === opt.value
-        return (
-          <button
-            key={opt.value}
-            role="tab"
-            aria-selected={active}
-            onClick={() => setMode(opt.value)}
-            className={clsx(
-              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200',
-              active
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            )}
-          >
-            <span aria-hidden>{opt.icon}</span>
-            {opt.label}
-          </button>
-        )
-      })}
+      <button
+        role="tab"
+        aria-selected={mode === 'edit'}
+        onClick={() => setMode('edit')}
+        className={segClass(mode === 'edit')}
+      >
+        Redigera
+      </button>
+      <button
+        role="tab"
+        aria-selected={mode === 'shopping'}
+        onClick={() => setMode('shopping')}
+        className={segClass(mode === 'shopping')}
+      >
+        <Cart size={15} />
+        Handla
+      </button>
     </div>
+  )
+}
+
+function segClass(active: boolean) {
+  return clsx(
+    'inline-flex items-center gap-1.5 px-[15px] py-[7px] rounded-full text-[13.5px] font-medium transition-all',
+    active ? 'bg-surface text-ink shadow-[0_1px_2px_oklch(0.4_0.02_60/0.12)]' : 'text-ink-3 hover:text-ink-2'
   )
 }

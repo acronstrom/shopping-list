@@ -4,10 +4,12 @@ import { StoreCategoryOrderEditor } from './StoreCategoryOrderEditor'
 import { StoreOffersList } from './StoreOffersList'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { Store } from '@/types'
+import { Store, Tag, Trash, ChevronDown, ArrowRight } from '@/lib/icons'
+import { clsx } from 'clsx'
+import type { Store as StoreType } from '@/types'
 
 interface Props {
-  store: Store
+  store: StoreType
 }
 
 function normalizeUrl(input: string): string {
@@ -59,56 +61,48 @@ export function StoreCard({ store }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="flex items-center justify-between p-4">
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left"
-        >
-          <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-lg">🏪</span>
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium text-gray-900 text-sm truncate">{store.name}</p>
-            <p className="text-xs text-gray-400">Tryck för att {expanded ? 'dölja' : 'redigera'}</p>
-          </div>
-          <svg
-            className={`w-4 h-4 text-gray-400 ml-auto transition-transform ${expanded ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+    <div className="bg-surface rounded-[18px] shadow-card border border-hair overflow-hidden">
+      <div className="flex items-center gap-2 p-3.5">
+        <button onClick={() => setExpanded(e => !e)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <span
+            className={clsx(
+              'w-10 h-10 rounded-[12px] grid place-items-center flex-none transition-colors',
+              expanded ? 'bg-clay-tint text-clay-deep' : 'bg-surface-2 border border-hair text-ink-2'
+            )}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+            <Store size={21} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-ink truncate">{store.name}</span>
+            <span className="block text-[13px] text-ink-3">Tryck för att {expanded ? 'dölja' : 'redigera'}</span>
+          </span>
+          <ChevronDown size={18} className={clsx('text-ink-4 flex-none transition-transform', expanded && 'rotate-180')} />
         </button>
-        {hasUrl && (
+        {hasUrl && !expanded && (
           <button
-            onClick={e => {
-              e.stopPropagation()
-              openOffers(store.offers_url)
-            }}
-            className="ml-2 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors whitespace-nowrap"
+            onClick={e => { e.stopPropagation(); openOffers(store.offers_url) }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-clay-deep bg-clay-tint border border-clay-line rounded-full transition-colors whitespace-nowrap flex-none"
             aria-label="Öppna erbjudanden"
           >
-            <span aria-hidden>🏷️</span>
+            <Tag size={13} />
             <span className="hidden sm:inline">Erbjudanden</span>
           </button>
         )}
         <button
           onClick={() => deleteStore.mutate(store.id)}
           disabled={deleteStore.isPending}
-          className="ml-2 p-2 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+          className="p-2 text-ink-4 hover:text-rose hover:bg-rose-tint rounded-lg transition-colors disabled:opacity-50 flex-none"
           aria-label="Ta bort butik"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
+          <Trash size={16} />
         </button>
       </div>
 
       {expanded && (
-        <div className="border-t border-gray-50 px-4 pb-4 pt-3 flex flex-col gap-5">
+        <div className="border-t border-hair px-4 pb-4 pt-4 flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Erbjudanden</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">Erbjudanden</p>
+            <p className="text-[13px] text-ink-3">
               Länka till kedjans sida med aktuella erbjudanden. Den öppnas i din webbläsare.
             </p>
             <div className="flex gap-2 items-end">
@@ -121,34 +115,23 @@ export function StoreCard({ store }: Props) {
                   onChange={e => setUrlInput(e.target.value)}
                 />
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={handleSaveUrl}
-                loading={updateStore.isPending}
-                disabled={!inputChanged}
-              >
+              <Button type="button" size="sm" variant="secondary" onClick={handleSaveUrl} loading={updateStore.isPending} disabled={!inputChanged}>
                 Spara
               </Button>
             </div>
-            {urlError && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{urlError}</p>
-            )}
+            {urlError && <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{urlError}</p>}
             {hasUrl && (
               <button
                 type="button"
                 onClick={() => openOffers(store.offers_url)}
-                className="self-start inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                className="self-start inline-flex items-center gap-1.5 text-sm font-medium text-clay-deep hover:opacity-80"
               >
-                <span aria-hidden>🏷️</span>
+                <Tag size={15} />
                 Öppna i webbläsaren
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <ArrowRight size={15} />
               </button>
             )}
-            <div className="mt-2 pt-3 border-t border-gray-100">
+            <div className="mt-2 pt-3 border-t border-hair-2">
               <StoreOffersList
                 storeId={store.id}
                 storeName={store.name}
@@ -162,19 +145,14 @@ export function StoreCard({ store }: Props) {
             <button
               type="button"
               onClick={() => setOrderExpanded(o => !o)}
-              className="flex items-center justify-between gap-2 -mx-1 px-1 py-1 rounded-lg hover:bg-gray-50/80 transition-colors"
+              className="flex items-center justify-between gap-2 -mx-1 px-1 py-1 rounded-lg hover:bg-surface-2 transition-colors"
             >
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategoriordning</span>
-              <svg
-                className={`w-4 h-4 text-gray-400 transition-transform ${orderExpanded ? 'rotate-180' : ''}`}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
+              <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">Kategoriordning</span>
+              <ChevronDown size={17} className={clsx('text-ink-4 transition-transform', orderExpanded && 'rotate-180')} />
             </button>
             {orderExpanded && (
               <>
-                <p className="text-xs text-gray-400">
+                <p className="text-[13px] text-ink-3">
                   Välj i vilken ordning kategorierna ska visas/sorteras i den här butiken.
                 </p>
                 <StoreCategoryOrderEditor storeId={store.id} />

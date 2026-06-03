@@ -24,13 +24,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-fade-up" />
-      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] bg-white rounded-3xl shadow-2xl animate-fade-up border border-gray-200/60 flex flex-col overflow-hidden">
+      <div className="absolute inset-0 bg-ink/30 backdrop-blur-md animate-fade-up" />
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] bg-surface rounded-card shadow-pop animate-fade-up border border-hair flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 tracking-tight">{title}</h2>
+          <h2 className="font-serif text-[22px] font-medium text-ink tracking-[-0.01em]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-[11px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

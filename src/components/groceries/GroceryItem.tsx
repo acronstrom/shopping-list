@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useToggleGrocery, useDeleteGrocery } from '@/hooks/useGroceries'
 import { useUI } from '@/contexts/UIContext'
-import { CategoryBadge } from '@/components/ui/CategoryBadge'
+import { Check, Trash } from '@/lib/icons'
 import { playCompleteSound, playUncheckSound } from '@/lib/feedback'
 import { capitalizeFirst } from '@/lib/text'
 import type { GroceryItem as GroceryItemType } from '@/types'
@@ -24,7 +24,7 @@ function formatAddedAt(iso: string): string {
   })
 }
 
-const CONFETTI_COLORS = ['#10b981', '#34d399', '#fbbf24', '#60a5fa', '#f472b6']
+const CONFETTI_COLORS = ['#b5673c', '#d08a5a', '#e0a472', '#7e9479', '#cf9f5e']
 
 export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
   const toggle = useToggleGrocery()
@@ -67,9 +67,8 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           : undefined
       }
       className={clsx(
-        'relative flex items-center gap-3 px-4 group transition-all duration-300',
-        isShopping ? 'py-4 cursor-pointer active:bg-emerald-50/60 select-none' : 'py-3',
-        item.is_checked && 'opacity-60',
+        'group relative flex items-center gap-3 px-4 transition-colors duration-300',
+        isShopping ? 'py-4 cursor-pointer active:bg-clay-tint/60 select-none' : 'py-[13px]',
         celebrate > 0 && item.is_checked && 'animate-row-complete'
       )}
     >
@@ -80,34 +79,21 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
             handleToggle()
           }}
           className={clsx(
-            'relative rounded-full border-2 flex items-center justify-center transition-all duration-200',
-            isShopping ? 'w-9 h-9' : 'w-6 h-6',
+            'relative rounded-full border-[1.8px] flex items-center justify-center transition-all duration-200',
+            isShopping ? 'w-[30px] h-[30px]' : 'w-6 h-6',
             item.is_checked
-              ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_4px_12px_-2px_rgba(16,185,129,0.45)]'
-              : 'bg-white border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
+              ? 'bg-clay border-clay text-white'
+              : 'bg-surface border-hair hover:border-clay-line hover:bg-clay-tint/50'
           )}
           aria-label={item.is_checked ? 'Avmarkera' : 'Markera'}
           tabIndex={isShopping ? -1 : 0}
         >
           {item.is_checked && (
-            <svg
+            <Check
               key={celebrate}
-              className={clsx(
-                isShopping ? 'w-5 h-5' : 'w-3.5 h-3.5',
-                celebrate > 0 && 'animate-check-pop'
-              )}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path
-                className={clsx(celebrate > 0 && 'animate-check-draw')}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+              size={isShopping ? 18 : 15}
+              className={clsx(celebrate > 0 && 'animate-check-pop')}
+            />
           )}
         </button>
 
@@ -115,7 +101,7 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           <>
             <span
               key={`burst-${celebrate}`}
-              className="pointer-events-none absolute inset-0 rounded-full bg-emerald-400/40 animate-burst"
+              className="pointer-events-none absolute inset-0 rounded-full bg-clay/40 animate-burst"
               aria-hidden
             />
             <span
@@ -147,46 +133,48 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={clsx(
-              'text-sm font-medium text-gray-900 transition-all duration-300',
-              item.is_checked && 'line-through text-gray-400'
-            )}
-          >
-            {capitalizeFirst(item.name)}
-          </span>
-          {item.quantity && (
-            <span className={clsx('text-xs text-gray-500', item.is_checked && 'line-through text-gray-300')}>
-              {item.quantity}
-            </span>
+        <div
+          className={clsx(
+            'text-[16px] tracking-[-0.01em] transition-colors duration-300',
+            isShopping && 'text-[18px]',
+            item.is_checked ? 'text-ink-4 line-through decoration-ink-4' : 'text-ink'
           )}
+        >
+          {capitalizeFirst(item.name)}
         </div>
         {item.note && (
-          <p className={clsx('text-xs text-emerald-700 mt-0.5 flex items-center gap-1', item.is_checked && 'text-gray-300')}>
-            <span aria-hidden>🏷️</span>
-            <span className="truncate">{item.note}</span>
+          <p className={clsx('text-[13px] mt-0.5 truncate', item.is_checked ? 'text-ink-4' : 'text-clay-deep')}>
+            {item.note}
           </p>
         )}
-        <div className="flex items-center gap-2 mt-0.5">
-          <CategoryBadge category={item.category} />
-          {showAisle && aisleNumber !== undefined && (
-            <span className="text-xs text-gray-400">Gång {aisleNumber}</span>
-          )}
-          {!isShopping && (
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                setShowDate(v => !v)
-              }}
-              className="text-xs text-gray-300 hover:text-gray-400 transition-colors"
-              aria-label="Visa/dölj tidpunkt"
-            >
-              {showDate ? formatAddedAt(item.created_at) : '···'}
-            </button>
-          )}
-        </div>
+        {!isShopping && (
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setShowDate(v => !v)
+            }}
+            className="text-[11px] text-ink-4 hover:text-ink-3 transition-colors mt-0.5"
+            aria-label="Visa/dölj tidpunkt"
+          >
+            {showDate ? formatAddedAt(item.created_at) : '···'}
+          </button>
+        )}
+        {showAisle && aisleNumber !== undefined && (
+          <span className="text-[11px] text-ink-4 ml-2">Gång {aisleNumber}</span>
+        )}
       </div>
+
+      {item.quantity && (
+        <span
+          className={clsx(
+            'text-[15px] tabular-nums flex-none',
+            isShopping && 'text-[16px]',
+            item.is_checked ? 'text-ink-4' : 'text-ink-3'
+          )}
+        >
+          {item.quantity}
+        </span>
+      )}
 
       {!isShopping && (
         <button
@@ -194,12 +182,10 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
             e.stopPropagation()
             deleteItem.mutate(item.id)
           }}
-          className="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-red-50"
+          className="flex-shrink-0 p-1.5 text-ink-4 hover:text-rose md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-rose-tint"
           aria-label="Ta bort vara"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <Trash size={16} />
         </button>
       )}
     </div>

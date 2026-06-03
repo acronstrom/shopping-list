@@ -10,9 +10,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className, id, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          <label htmlFor={inputId} className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">
             {label}
           </label>
         )}
@@ -20,15 +20,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={clsx(
-            'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent',
-            'disabled:opacity-50 disabled:bg-gray-50',
-            error && 'border-red-400 focus:ring-red-400',
+            'w-full rounded-[14px] border border-hair bg-surface px-4 py-3 text-[16px] text-ink placeholder:text-ink-4 transition-colors',
+            'focus:outline-none focus:border-clay-line focus:ring-2 focus:ring-clay/30',
+            'disabled:opacity-50 disabled:bg-surface-2',
+            error && 'border-rose focus:border-rose focus:ring-rose/30',
             className
           )}
           {...props}
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-rose">{error}</p>}
       </div>
     )
   }

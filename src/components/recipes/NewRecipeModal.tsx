@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
+import { Link, Camera, Heart, HeartFill } from '@/lib/icons'
 import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
 import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
 import { useAddRecipe, useUpdateRecipe, useRecipeImageUrl, type RecipeIngredientInput } from '@/hooks/useRecipes'
@@ -455,9 +456,9 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     <Modal open={open} onClose={handleClose} title={editing ? 'Redigera recept' : 'Nytt recept'}>
       <div className="flex flex-col gap-3">
         {!editing && (
-          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-xs font-medium text-emerald-700">
-              <span aria-hidden>🔗</span>
+          <div className="bg-clay-tint border border-clay-line rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-clay-deep">
+              <Link size={14} />
               Importera från länk
             </div>
             <div className="flex gap-2 items-stretch">
@@ -473,7 +474,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                   }
                 }}
                 placeholder="https://www.ica.se/recept/…"
-                className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                className="flex-1 min-w-0 rounded-xl border border-hair px-3 py-2 text-sm placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line bg-surface"
               />
               <Button
                 type="button"
@@ -486,9 +487,9 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
               </Button>
             </div>
             {urlError && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{urlError}</p>
+              <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{urlError}</p>
             )}
-            <p className="text-[11px] text-gray-500">
+            <p className="text-[11px] text-ink-3">
               Funkar för ICA, Köket, Allt om Mat och de flesta större receptsajter (schema.org/Recipe).
             </p>
           </div>
@@ -496,12 +497,12 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
 
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bild</span>
+            <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">Bild</span>
             {previewImageUrl && (
               <button
                 type="button"
                 onClick={clearImage}
-                className="text-xs font-medium text-gray-400 hover:text-red-500"
+                className="text-xs font-medium text-ink-4 hover:text-rose"
               >
                 Ta bort
               </button>
@@ -511,7 +512,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             <button
               type="button"
               onClick={() => imageFileRef.current?.click()}
-              className="relative h-32 w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50 group"
+              className="relative h-32 w-full rounded-xl overflow-hidden border border-hair bg-surface-2 group"
             >
               <img
                 src={previewImageUrl}
@@ -526,9 +527,9 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             <button
               type="button"
               onClick={() => imageFileRef.current?.click()}
-              className="h-32 w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-1 text-gray-500"
+              className="h-32 w-full rounded-xl border border-dashed border-hair bg-surface-2 hover:bg-surface transition-colors flex flex-col items-center justify-center gap-1.5 text-ink-3"
             >
-              <span aria-hidden className="text-2xl">📷</span>
+              <Camera size={26} />
               <span className="text-xs font-medium">Lägg till bild</span>
             </button>
           )}
@@ -540,7 +541,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             className="hidden"
           />
           {imageError && (
-            <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{imageError}</p>
+            <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{imageError}</p>
           )}
         </div>
 
@@ -554,12 +555,12 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
 
         <div className="flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1 w-32">
-            <span className="text-sm font-medium text-gray-700">Portioner</span>
-            <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <span className="text-sm font-medium text-ink-2">Portioner</span>
+            <div className="flex items-stretch rounded-xl border border-hair bg-surface overflow-hidden">
               <button
                 type="button"
                 onClick={() => setServings(s => Math.max(1, s - 1))}
-                className="px-3 text-gray-500 hover:bg-gray-50"
+                className="px-3 text-ink-2 hover:bg-surface-2"
                 aria-label="Minska portioner"
               >−</button>
               <input
@@ -568,23 +569,23 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                 min={1}
                 max={99}
                 onChange={e => setServings(Number(e.target.value))}
-                className="flex-1 min-w-0 w-full text-center text-sm text-gray-900 focus:outline-none"
+                className="flex-1 min-w-0 w-full text-center text-sm text-ink focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setServings(s => Math.min(99, s + 1))}
-                className="px-3 text-gray-500 hover:bg-gray-50"
+                className="px-3 text-ink-2 hover:bg-surface-2"
                 aria-label="Öka portioner"
               >+</button>
             </div>
           </label>
 
           <label className="flex flex-col gap-1 flex-1 min-w-[10rem]">
-            <span className="text-sm font-medium text-gray-700">Kategori</span>
+            <span className="text-sm font-medium text-ink-2">Kategori</span>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
             >
               <option value="">Automatiskt (AI gissar)</option>
               {recipeCategories.map(c => (
@@ -599,7 +600,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
               Förberedelse (min)
             </span>
             <input
@@ -609,11 +610,11 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
               value={prepTime}
               onChange={e => setPrepTime(e.target.value)}
               placeholder="—"
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
               Tillagning (min)
             </span>
             <input
@@ -623,22 +624,22 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
               value={cookTime}
               onChange={e => setCookTime(e.target.value)}
               placeholder="—"
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
             />
           </label>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
               Svårighet
             </span>
-            <div className="flex rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <div className="flex rounded-xl border border-hair bg-surface overflow-hidden">
               <button
                 type="button"
                 onClick={() => setDifficulty('')}
                 className={`px-3 py-1.5 text-xs font-medium ${
-                  difficulty === '' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'
+                  difficulty === '' ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2'
                 }`}
               >
                 —
@@ -649,7 +650,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                   type="button"
                   onClick={() => setDifficulty(d)}
                   className={`px-3 py-1.5 text-xs font-medium capitalize ${
-                    difficulty === d ? 'bg-emerald-100 text-emerald-800' : 'text-gray-500 hover:bg-gray-50'
+                    difficulty === d ? 'bg-clay-tint text-clay-deep' : 'text-ink-2 hover:bg-surface-2'
                   }`}
                 >
                   {d}
@@ -659,7 +660,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Betyg</span>
+            <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">Betyg</span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map(n => (
                 <button
@@ -668,7 +669,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                   onClick={() => setRating(prev => (prev === n ? null : n))}
                   aria-label={`Sätt betyg ${n}`}
                   className={`text-lg leading-none ${
-                    rating !== null && n <= rating ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'
+                    rating !== null && n <= rating ? 'text-clay' : 'text-ink-4 hover:text-clay/60'
                   }`}
                 >
                   ★
@@ -680,18 +681,18 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           <button
             type="button"
             onClick={() => setIsFavorite(v => !v)}
-            className={`mt-5 inline-flex items-center gap-1 text-sm font-medium ${
-              isFavorite ? 'text-rose-500' : 'text-gray-400 hover:text-rose-400'
+            className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium ${
+              isFavorite ? 'text-clay' : 'text-ink-4 hover:text-clay'
             }`}
             aria-pressed={isFavorite}
           >
-            <span aria-hidden>{isFavorite ? '♥' : '♡'}</span>
+            {isFavorite ? <HeartFill size={16} /> : <Heart size={16} />}
             Favorit
           </button>
         </div>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
             Taggar
           </span>
           <input
@@ -699,13 +700,13 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             value={tagsInput}
             onChange={e => setTagsInput(e.target.value)}
             placeholder="t.ex. snabbt, vego, barnvänligt"
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
           />
-          <span className="text-[11px] text-gray-400">Separera med komma.</span>
+          <span className="text-[11px] text-ink-4">Separera med komma.</span>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
             Källa
           </span>
           <input
@@ -714,22 +715,22 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             value={sourceUrl}
             onChange={e => setSourceUrl(e.target.value)}
             placeholder="https://…"
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
           />
         </label>
 
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
             Ingredienser
-            {ingredientCount > 0 && <span className="ml-1 text-gray-400">· {ingredientCount}</span>}
+            {ingredientCount > 0 && <span className="ml-1 text-ink-4">· {ingredientCount}</span>}
           </p>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={parsing}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-clay-deep hover:opacity-80 disabled:opacity-50"
           >
-            <span aria-hidden>📷</span>
+            <Camera size={14} />
             {parsing
               ? parseProgress && parseProgress.total > 1
                 ? `Läser recept ${parseProgress.current}/${parseProgress.total}…`
@@ -747,7 +748,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
         </div>
 
         {parsing && (
-          <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-ink-3 bg-surface-2 rounded-[10px] px-3 py-2">
             <Spinner className="h-4 w-4" />
             {parseProgress && parseProgress.total > 1
               ? `Läser ingredienserna (${parseProgress.current}/${parseProgress.total})…`
@@ -755,7 +756,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           </div>
         )}
         {parseError && (
-          <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{parseError}</p>
+          <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{parseError}</p>
         )}
 
         <div className="max-h-[40vh] overflow-y-auto -mx-1 px-1 flex flex-col gap-3">
@@ -768,14 +769,14 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                     value={section.name}
                     onChange={e => updateSectionName(sIdx, e.target.value)}
                     placeholder={sIdx === 0 ? 'Huvudingredienser (valfritt)' : `Sektion ${sIdx + 1}`}
-                    className="flex-1 min-w-0 text-xs font-semibold text-gray-700 uppercase tracking-wide bg-transparent border-b border-dashed border-gray-200 focus:border-emerald-300 focus:outline-none py-1 placeholder:text-gray-400 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal"
+                    className="flex-1 min-w-0 text-xs font-semibold text-ink-2 uppercase tracking-wide bg-transparent border-b border-dashed border-hair focus:border-clay-line focus:outline-none py-1 placeholder:text-ink-4 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal"
                   />
                   {sections.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeSection(sIdx)}
                       aria-label="Ta bort sektion"
-                      className="p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      className="p-1 rounded-md text-ink-4 hover:text-rose hover:bg-rose-tint transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -792,20 +793,20 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
                     value={row.name}
                     onChange={e => updateRow(sIdx, rIdx, { name: e.target.value })}
                     placeholder="Ingrediens"
-                    className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors"
+                    className="flex-1 min-w-0 rounded-xl border border-hair px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line transition-colors"
                   />
                   <input
                     type="text"
                     value={row.quantity}
                     onChange={e => updateRow(sIdx, rIdx, { quantity: e.target.value })}
                     placeholder="Antal"
-                    className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors"
+                    className="w-24 rounded-xl border border-hair px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => removeRow(sIdx, rIdx)}
                     aria-label="Ta bort ingrediens"
-                    className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded-lg text-ink-4 hover:text-rose hover:bg-rose-tint transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -817,7 +818,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
               <button
                 type="button"
                 onClick={() => addRow(sIdx)}
-                className="self-start text-xs font-medium text-emerald-600 hover:text-emerald-700 mt-0.5"
+                className="self-start text-xs font-medium text-clay-deep hover:opacity-80 mt-0.5"
               >
                 + Lägg till ingrediens
               </button>
@@ -828,13 +829,13 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
         <button
           type="button"
           onClick={addSection}
-          className="self-start text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          className="self-start text-sm font-medium text-clay-deep hover:opacity-80"
         >
           + Lägg till sektion
         </button>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
             Instruktioner
           </span>
           <textarea
@@ -842,20 +843,21 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
             onChange={e => setInstructions(e.target.value)}
             placeholder={'1. Riv löken fint.\n2. Blanda alla ingredienser…'}
             rows={6}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors resize-y"
+            className="w-full rounded-xl border border-hair px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line transition-colors resize-y"
           />
         </label>
 
         {error && (
-          <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          <p className="text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>
         )}
 
-        <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-white/95 backdrop-blur border-t border-gray-100 flex gap-2 mt-2">
+        <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-paper/95 backdrop-blur border-t border-hair flex gap-2 mt-2">
           <Button type="button" variant="secondary" onClick={handleClose} className="flex-1">
             Avbryt
           </Button>
           <Button
             type="button"
+            variant="clay"
             onClick={handleSave}
             loading={saving || imageUploading}
             disabled={!name.trim() || ingredientCount === 0}

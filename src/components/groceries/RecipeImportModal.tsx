@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { CategoryBadge } from '@/components/ui/CategoryBadge'
+import { Dot } from '@/components/ui/Dot'
 import { useAddGroceriesBulk } from '@/hooks/useGroceries'
 import type { ParsedIngredient } from '@/hooks/useParseRecipe'
 
@@ -59,7 +59,7 @@ export function RecipeImportModal({
       {loading ? (
         <div className="py-10 flex flex-col items-center gap-3">
           <Spinner className="h-8 w-8" />
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-2">
             {progress && progress.total > 1
               ? `Läser recept ${progress.current}/${progress.total}…`
               : 'Läser receptet…'}
@@ -67,36 +67,33 @@ export function RecipeImportModal({
         </div>
       ) : error ? (
         <div className="py-6 flex flex-col items-center gap-3 text-center">
-          <p className="text-sm text-gray-700">{error}</p>
+          <p className="text-sm text-ink-2">{error}</p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose}>Avbryt</Button>
-            <Button onClick={onRetry}>Försök igen</Button>
+            <Button variant="clay" onClick={onRetry}>Försök igen</Button>
           </div>
         </div>
       ) : isEmpty ? (
         <div className="py-6 flex flex-col items-center gap-3 text-center">
-          <p className="text-sm text-gray-700">Inga ingredienser hittades i bilden.</p>
+          <p className="text-sm text-ink-2">Inga ingredienser hittades i bilden.</p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose}>Avbryt</Button>
-            <Button onClick={onRetry}>Försök igen</Button>
+            <Button variant="clay" onClick={onRetry}>Försök igen</Button>
           </div>
         </div>
       ) : (
         <>
-          <p className="text-xs text-gray-500 mb-3">
+          <p className="text-[13px] text-ink-3 mb-3">
             Granska och justera innan du lägger till. Bocka ur det du inte behöver.
           </p>
           <div className="max-h-[55vh] overflow-y-auto -mx-2 px-2 flex flex-col gap-2">
             {rows.map((row, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-2 p-2 rounded-xl border border-gray-200/70 bg-white"
-              >
+              <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-[14px] border border-hair bg-surface">
                 <input
                   type="checkbox"
                   checked={row.selected}
                   onChange={e => updateRow(i, { selected: e.target.checked })}
-                  className="mt-2.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  className="mt-2.5 h-4 w-4 rounded accent-clay"
                 />
                 <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                   <div className="flex gap-2">
@@ -104,17 +101,20 @@ export function RecipeImportModal({
                       type="text"
                       value={row.name}
                       onChange={e => updateRow(i, { name: e.target.value })}
-                      className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 border-b border-transparent focus:border-emerald-300 focus:outline-none py-1"
+                      className="flex-1 min-w-0 bg-transparent text-sm text-ink border-b border-transparent focus:border-clay-line focus:outline-none py-1"
                     />
                     <input
                       type="text"
                       value={row.quantity ?? ''}
                       placeholder="Antal"
                       onChange={e => updateRow(i, { quantity: e.target.value || null })}
-                      className="w-20 bg-transparent text-sm text-gray-700 border-b border-transparent focus:border-emerald-300 focus:outline-none py-1"
+                      className="w-20 bg-transparent text-sm text-ink-2 border-b border-transparent focus:border-clay-line focus:outline-none py-1"
                     />
                   </div>
-                  <CategoryBadge category={row.category} />
+                  <span className="flex items-center gap-1.5 text-[12px] text-ink-3">
+                    <Dot category={row.category} />
+                    {row.category}
+                  </span>
                 </div>
               </div>
             ))}
@@ -122,6 +122,7 @@ export function RecipeImportModal({
           <div className="flex gap-2 mt-4">
             <Button variant="secondary" onClick={onClose} className="flex-1">Avbryt</Button>
             <Button
+              variant="clay"
               onClick={handleAdd}
               loading={addBulk.isPending}
               disabled={selectedCount === 0}

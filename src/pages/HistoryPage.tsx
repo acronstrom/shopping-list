@@ -4,11 +4,14 @@ import {
   useDeletePurchaseHistoryItem,
   usePurchaseHistory,
 } from '@/hooks/usePurchaseHistory'
-import { Header } from '@/components/layout/Header'
-import { CategoryBadge } from '@/components/ui/CategoryBadge'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Group, GroupHeader } from '@/components/ui/Group'
+import { Dot } from '@/components/ui/Dot'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { Trash } from '@/lib/icons'
+import { capitalizeFirst } from '@/lib/text'
 
 function formatDate(dateStr: string) {
   return new Intl.DateTimeFormat('sv-SE', {
@@ -49,8 +52,8 @@ export function HistoryPage() {
 
   return (
     <div>
-      <Header title="Inköpshistorik" />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
+      <PageHeader eyebrow="Mer" title="Inköpshistorik" />
+      <div className="px-[18px] pt-2 flex flex-col gap-[18px]">
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
         ) : history.length === 0 ? (
@@ -61,70 +64,52 @@ export function HistoryPage() {
           />
         ) : (
           <>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-gray-400">
-                {history.length} {history.length === 1 ? 'inköp' : 'inköp'} sparade
-              </p>
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-[13px] text-ink-3">{history.length} inköp sparade</p>
               {confirmClear ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-600">Rensa allt?</span>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    onClick={handleClear}
-                    loading={clearHistory.isPending}
-                  >
+                  <span className="text-[13px] text-ink-3">Rensa allt?</span>
+                  <Button type="button" variant="danger" size="sm" onClick={handleClear} loading={clearHistory.isPending}>
                     Ja, rensa
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConfirmClear(false)}
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmClear(false)}>
                     Avbryt
                   </Button>
                 </div>
               ) : (
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => setConfirmClear(true)}
+                  className="text-[13px] font-medium text-rose hover:opacity-80"
                 >
                   Rensa historik
-                </Button>
+                </button>
               )}
             </div>
 
             {Object.entries(grouped).map(([label, items]) => (
-              <div key={label}>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-                  {label}
-                </h2>
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
+              <div key={label} className="flex flex-col">
+                <GroupHeader>{label}</GroupHeader>
+                <Group divider>
                   {items.map(row => (
-                    <div key={row.id} className="group flex items-center justify-between px-4 py-3 gap-2">
+                    <div key={row.id} className="group flex items-center gap-3 px-4 py-3.5">
+                      {row.category ? <Dot category={row.category} /> : <Dot className="bg-c-other" />}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 capitalize truncate">{row.item_name}</p>
-                        <p className="text-xs text-gray-400">{formatDate(row.purchased_at)}</p>
+                        <p className="text-[15.5px] text-ink truncate">{capitalizeFirst(row.item_name)}</p>
                       </div>
-                      {row.category && <CategoryBadge category={row.category} />}
+                      <span className="text-[13px] text-ink-3 tabular-nums flex-none">{formatDate(row.purchased_at)}</span>
                       <button
                         type="button"
                         onClick={() => deleteItem.mutate(row.id)}
                         disabled={deleteItem.isPending}
-                        className="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-red-50 disabled:opacity-40"
+                        className="flex-none p-1.5 text-ink-4 hover:text-rose md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all rounded-lg hover:bg-rose-tint disabled:opacity-40"
                         aria-label={`Ta bort ${row.item_name} från historiken`}
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <Trash size={16} />
                       </button>
                     </div>
                   ))}
-                </div>
+                </Group>
               </div>
             ))}
           </>

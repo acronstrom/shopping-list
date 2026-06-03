@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useCreateHousehold, useJoinHousehold } from '@/hooks/useHousehold'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Users } from '@/lib/icons'
 import { supabase } from '@/lib/supabase'
 
 export function HouseholdSetup() {
@@ -37,17 +38,17 @@ export function HouseholdSetup() {
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-paper flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4 shadow-lg">
-            <span className="text-3xl">🏠</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-clay rounded-card mb-4 shadow-card text-white">
+            <Users size={30} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Konfigurera ditt hushåll</h1>
-          <p className="text-sm text-gray-500 mt-1">Skapa ett nytt hushåll eller gå med i ett befintligt</p>
+          <h1 className="font-serif text-[26px] font-medium tracking-[-0.02em] text-ink">Konfigurera ditt hushåll</h1>
+          <p className="text-sm text-ink-3 mt-1">Skapa ett nytt hushåll eller gå med i ett befintligt</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-surface rounded-card shadow-card border border-hair p-6">
           {mode === 'choose' && (
             <div className="flex flex-col gap-3">
               <Button size="lg" onClick={() => setMode('create')} className="w-full">
@@ -58,7 +59,7 @@ export function HouseholdSetup() {
               </Button>
               <button
                 onClick={handleSignOut}
-                className="text-sm text-gray-400 hover:text-gray-600 mt-2 transition-colors"
+                className="text-sm text-ink-4 hover:text-ink-2 mt-2 transition-colors"
               >
                 Logga ut
               </button>
@@ -70,7 +71,7 @@ export function HouseholdSetup() {
               <button
                 type="button"
                 onClick={() => { setMode('choose'); setError('') }}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 -mb-1"
+                className="flex items-center gap-1 text-sm text-ink-3 hover:text-ink -mb-1"
               >
                 ← Tillbaka
               </button>
@@ -81,7 +82,7 @@ export function HouseholdSetup() {
                 placeholder="t.ex. Familjen Svensson"
                 required
               />
-              {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+              {error && <p className="text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
               <Button type="submit" loading={createHousehold.isPending} size="lg" className="w-full">
                 Skapa hushåll
               </Button>
@@ -93,14 +94,14 @@ export function HouseholdSetup() {
               <button
                 type="button"
                 onClick={() => { setMode('choose'); setError('') }}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 -mb-1"
+                className="flex items-center gap-1 text-sm text-ink-3 hover:text-ink -mb-1"
               >
                 ← Tillbaka
               </button>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-2">
                 Någon måste bjuda in dig via e-post först. Vi letar efter en väntande inbjudan till ditt konto.
               </p>
-              {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+              {error && <p className="text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
               <Button type="submit" loading={joinHousehold.isPending} size="lg" className="w-full">
                 Hitta min inbjudan
               </Button>

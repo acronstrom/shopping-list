@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Header } from '@/components/layout/Header'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { InviteMemberForm } from '@/components/household/InviteMemberForm'
 import { HouseholdCategoriesSection } from '@/components/household/HouseholdCategoriesSection'
 import { HouseholdRecipeCategoriesSection } from '@/components/household/HouseholdRecipeCategoriesSection'
@@ -42,8 +42,8 @@ export function SettingsPage() {
 
   return (
     <div>
-      <Header title="Inställningar" />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-6">
+      <PageHeader eyebrow="Mer" title="Inställningar" />
+      <div className="px-[18px] pt-2 flex flex-col gap-6">
 
         <HouseholdCategoriesSection />
 
@@ -55,26 +55,26 @@ export function SettingsPage() {
         />
 
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
+          <h2 className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em] mb-3 px-1.5">
             Hushållsmedlemmar
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-surface rounded-group shadow-card border border-hair overflow-hidden">
             {isLoading ? (
               <div className="flex justify-center py-6"><Spinner /></div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-hair-2">
                 {members.map(member => (
-                  <div key={member.id} className="flex items-center justify-between px-4 py-3">
+                  <div key={member.id} className="flex items-center justify-between px-4 py-3.5">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{member.email}</p>
+                      <p className="text-[15px] text-ink">{member.email}</p>
                       {member.user_id === user?.id && (
-                        <p className="text-xs text-gray-400">Du</p>
+                        <p className="text-[13px] text-ink-4">Du</p>
                       )}
                     </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    <span className={`text-[12px] font-medium px-2.5 py-1 rounded-full ${
                       member.status === 'accepted'
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-amber-50 text-amber-600'
+                        ? 'bg-sage-tint text-sage'
+                        : 'bg-clay-tint text-clay-deep'
                     }`}>
                       {member.status === 'accepted' ? 'Aktiv' : 'Väntande'}
                     </span>
@@ -86,20 +86,20 @@ export function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
+          <h2 className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em] mb-3 px-1.5">
             Bjud in medlem
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-surface rounded-group shadow-card border border-hair p-4">
             <InviteMemberForm />
           </div>
         </section>
 
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
+          <h2 className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em] mb-3 px-1.5">
             Konto
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-600 mb-4">Inloggad som <strong>{user?.email}</strong></p>
+          <div className="bg-surface rounded-group shadow-card border border-hair p-4">
+            <p className="text-sm text-ink-2 mb-4">Inloggad som <strong className="text-ink">{user?.email}</strong></p>
             <Button
               variant="danger"
               onClick={handleSignOut}

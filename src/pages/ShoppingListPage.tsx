@@ -1,4 +1,4 @@
-import { Header } from '@/components/layout/Header'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { AddGroceryForm } from '@/components/groceries/AddGroceryForm'
 import { GroceryList } from '@/components/groceries/GroceryList'
 import { SortControls } from '@/components/groceries/SortControls'
@@ -12,8 +12,8 @@ export function ShoppingListPage() {
 
   return (
     <div>
-      <Header title="Inköpslista" />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <PageHeader title="Inköpslista" />
+      <div className="px-[18px] pt-2 flex flex-col gap-4">
         <ModeToggle />
         <SortControls />
         {!isShopping && <SuggestionBar />}

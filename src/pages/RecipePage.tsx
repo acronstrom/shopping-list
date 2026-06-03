@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Header } from '@/components/layout/Header'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { Group } from '@/components/ui/Group'
 import { NewRecipeModal } from '@/components/recipes/NewRecipeModal'
 import {
   useDeleteRecipe,
@@ -16,6 +16,18 @@ import { scaleQuantity } from '@/lib/recipeScale'
 import { splitInstructions } from '@/lib/parseInstructions'
 import { dedupeIngredients } from '@/lib/parseIngredient'
 import { toIsoDate } from '@/lib/week'
+import {
+  Book,
+  Cart,
+  Calendar,
+  Check,
+  ChevronLeft,
+  Flame,
+  Heart,
+  HeartFill,
+  Minus,
+  Plus,
+} from '@/lib/icons'
 import { clsx } from 'clsx'
 
 type Mode = 'shop' | 'cook'
@@ -159,10 +171,7 @@ export function RecipePage() {
     if (!recipe) return
     setPlanError(null)
     try {
-      await upsertPlanEntry.mutateAsync({
-        recipeId: recipe.id,
-        plannedDate: planDate,
-      })
+      await upsertPlanEntry.mutateAsync({ recipeId: recipe.id, plannedDate: planDate })
       setPlanSavedAt(Date.now())
       setShowPlanPicker(false)
       window.setTimeout(() => setPlanSavedAt(null), 2000)
@@ -177,207 +186,175 @@ export function RecipePage() {
   }
 
   if (isLoading) {
-    return (
-      <div>
-        <Header title="Recept" />
-        <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
-      </div>
-    )
+    return <div className="flex justify-center py-16"><Spinner className="h-6 w-6" /></div>
   }
 
   if (!recipe) {
     return (
-      <div>
-        <Header title="Recept" />
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <p className="text-sm text-gray-500">Receptet hittades inte.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/recipes')}
-            className="mt-3 text-sm text-emerald-600 hover:text-emerald-700"
-          >
-            ← Tillbaka till alla recept
-          </button>
-        </div>
+      <div className="px-[22px] pt-8">
+        <p className="text-sm text-ink-3">Receptet hittades inte.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/recipes')}
+          className="mt-3 text-sm text-clay-deep hover:opacity-80"
+        >
+          ← Tillbaka till alla recept
+        </button>
       </div>
     )
   }
 
+  const hasStats =
+    !!recipe.prep_time_minutes ||
+    !!recipe.cook_time_minutes ||
+    (recipe.rating !== null && recipe.rating > 0)
+
   return (
-    <div className="pb-12">
-      <Header title={recipe.name} action={{ label: 'Redigera', onClick: () => setEditing(true) }} />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-5">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/recipes')}
-            className="text-xs text-gray-500 hover:text-gray-700"
-          >
-            ← Alla recept
-          </button>
-          <div role="tablist" aria-label="Läge" className="inline-flex rounded-full bg-gray-100/80 p-1 border border-gray-200/60">
-            {(['shop', 'cook'] as Mode[]).map(option => {
-              const active = mode === option
-              return (
-                <button
-                  key={option}
-                  role="tab"
-                  aria-selected={active}
-                  type="button"
-                  onClick={() => setMode(option)}
-                  className={clsx(
-                    'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all',
-                    active
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  <span aria-hidden>{option === 'shop' ? '🛒' : '🍳'}</span>
-                  {option === 'shop' ? 'Inköp' : 'Laga'}
-                </button>
-              )
-            })}
+    <div className="pb-6">
+      {/* Hero */}
+      <div className="relative">
+        {heroImageUrl ? (
+          <img src={heroImageUrl} alt="" className="w-full h-[232px] object-cover" />
+        ) : (
+          <div className="w-full h-[180px] bg-surface-2 grid place-items-center text-ink-4">
+            <Book size={40} />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => navigate('/recipes')}
+          aria-label="Tillbaka"
+          className="absolute top-3.5 left-3.5 w-9 h-9 rounded-full bg-surface/90 backdrop-blur grid place-items-center text-ink shadow-card"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleFavorite.mutate({ id: recipe.id, is_favorite: !recipe.is_favorite })}
+          aria-pressed={recipe.is_favorite}
+          aria-label={recipe.is_favorite ? 'Ta bort favorit' : 'Markera som favorit'}
+          className={clsx(
+            'absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-surface/90 backdrop-blur grid place-items-center shadow-card',
+            recipe.is_favorite ? 'text-clay' : 'text-ink-3'
+          )}
+        >
+          {recipe.is_favorite ? <HeartFill size={19} /> : <Heart size={19} />}
+        </button>
+      </div>
+
+      <div className="px-[22px] pt-[18px]">
+        {(recipe.category || recipe.difficulty || (recipe.tags && recipe.tags.length > 0)) && (
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {recipe.category && (
+              <span className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-clay-tint text-clay-deep border border-clay-line">
+                {recipe.category}
+              </span>
+            )}
+            {recipe.difficulty && (
+              <span className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair capitalize">
+                {recipe.difficulty}
+              </span>
+            )}
+            {recipe.tags?.map(tag => (
+              <span key={tag} className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <h1 className="font-serif text-[30px] font-medium tracking-[-0.02em] leading-[1.04] text-ink">
+          {recipe.name}
+        </h1>
+
+        {hasStats && (
+          <div className="flex gap-[18px] mt-3.5 flex-wrap">
+            {recipe.prep_time_minutes ? <Stat label="Förberedelse" value={`${recipe.prep_time_minutes} min`} /> : null}
+            {recipe.cook_time_minutes ? <Stat label="Tillagning" value={`${recipe.cook_time_minutes} min`} /> : null}
+            {recipe.rating !== null && recipe.rating > 0 && (
+              <Stat label="Betyg" value={'★'.repeat(recipe.rating) + '☆'.repeat(5 - recipe.rating)} clay />
+            )}
+          </div>
+        )}
+
+        {/* Portions */}
+        <div className="flex items-center justify-between mt-[18px] pt-4 border-t border-hair">
+          <div>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">Portioner</div>
+            <div className="text-[13px] text-ink-4 mt-0.5">Skrivet för {recipe.servings}</div>
+          </div>
+          <div className="inline-flex items-center gap-0.5 rounded-[12px] bg-surface-2 border border-hair p-1">
+            <button
+              type="button"
+              onClick={() => setOverrideServings(Math.max(1, servings - 1))}
+              className="px-3 py-1.5 text-ink-2 hover:text-ink"
+              aria-label="Minska portioner"
+            >
+              <Minus size={16} />
+            </button>
+            <span className="font-serif text-[18px] font-medium min-w-[34px] text-center text-ink">{servings}</span>
+            <button
+              type="button"
+              onClick={() => setOverrideServings(Math.min(99, servings + 1))}
+              className="px-3 py-1.5 text-ink-2 hover:text-ink"
+              aria-label="Öka portioner"
+            >
+              <Plus size={16} />
+            </button>
           </div>
         </div>
 
-        <header className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          {heroImageUrl && (
-            <div className="w-full h-44 sm:h-56 bg-gray-100">
-              <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
+        {/* Veckoplan + mode segmented */}
+        <div className="flex items-center gap-2.5 mt-4">
+          {showPlanPicker ? (
+            <div className="flex items-center gap-2 w-full flex-wrap">
+              <input
+                type="date"
+                value={planDate}
+                onChange={e => setPlanDate(e.target.value)}
+                className="rounded-[12px] border border-hair bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:border-clay-line focus:ring-2 focus:ring-clay/30"
+              />
+              <Button type="button" variant="clay" size="sm" onClick={handleAddToPlan} loading={upsertPlanEntry.isPending}>
+                Spara
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setShowPlanPicker(false)}>
+                Avbryt
+              </Button>
             </div>
+          ) : (
+            <>
+              <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={() => setShowPlanPicker(true)}>
+                <Calendar size={17} />
+                {planSavedAt ? 'Tillagd i veckoplan' : 'Veckoplan'}
+              </Button>
+              <div className="inline-flex gap-0.5 rounded-full bg-surface-2 border border-hair p-[3px] flex-none">
+                <button type="button" onClick={() => setMode('shop')} className={segClass(mode === 'shop')}>
+                  <Cart size={15} />
+                  Inköp
+                </button>
+                <button type="button" onClick={() => setMode('cook')} className={segClass(mode === 'cook')}>
+                  <Flame size={15} />
+                  Laga
+                </button>
+              </div>
+            </>
           )}
-          <div className="p-5 flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <h1 className="flex-1 text-2xl font-semibold text-gray-900 tracking-tight leading-tight">
-                {recipe.name}
-              </h1>
-              <button
-                type="button"
-                onClick={() => toggleFavorite.mutate({ id: recipe.id, is_favorite: !recipe.is_favorite })}
-                aria-pressed={recipe.is_favorite}
-                aria-label={recipe.is_favorite ? 'Ta bort favorit' : 'Markera som favorit'}
-                className={clsx(
-                  'p-2 rounded-xl transition-colors text-xl leading-none',
-                  recipe.is_favorite
-                    ? 'text-rose-500 hover:bg-rose-50'
-                    : 'text-gray-300 hover:text-rose-400 hover:bg-gray-50',
-                )}
-              >
-                {recipe.is_favorite ? '♥' : '♡'}
-              </button>
-            </div>
+        </div>
 
-            {(recipe.prep_time_minutes || recipe.cook_time_minutes || recipe.difficulty || recipe.rating) && (
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {recipe.prep_time_minutes ? (
-                  <Pill label={`Förb. ${recipe.prep_time_minutes} min`} />
-                ) : null}
-                {recipe.cook_time_minutes ? (
-                  <Pill label={`Tillagn. ${recipe.cook_time_minutes} min`} />
-                ) : null}
-                {recipe.difficulty && (
-                  <Pill label={recipe.difficulty} className="capitalize bg-emerald-50 text-emerald-700" />
-                )}
-                {recipe.rating !== null && recipe.rating > 0 && (
-                  <Pill
-                    label={'★'.repeat(recipe.rating) + '☆'.repeat(5 - recipe.rating)}
-                    className="bg-amber-50 text-amber-700 tracking-tight"
-                  />
-                )}
-              </div>
-            )}
+        {planError && <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5 mt-2">{planError}</p>}
+        {recipe.source_url && (
+          <a
+            href={recipe.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-[13px] text-ink-3 hover:text-clay-deep underline underline-offset-2 mt-2.5"
+          >
+            Källa ↗
+          </a>
+        )}
+      </div>
 
-            {recipe.tags && recipe.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {recipe.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Portioner</p>
-                <p className="text-xs text-gray-400 mt-0.5">Receptet är skrivet för {recipe.servings}.</p>
-              </div>
-              <div className="flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setOverrideServings(Math.max(1, servings - 1))}
-                  className="px-3 text-gray-500 hover:bg-gray-50"
-                  aria-label="Minska portioner"
-                >−</button>
-                <span className="px-4 py-2 text-base font-semibold text-gray-900 min-w-[3rem] text-center">
-                  {servings}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setOverrideServings(Math.min(99, servings + 1))}
-                  className="px-3 text-gray-500 hover:bg-gray-50"
-                  aria-label="Öka portioner"
-                >+</button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap pt-1">
-              {showPlanPicker ? (
-                <div className="flex items-center gap-2 w-full flex-wrap">
-                  <input
-                    type="date"
-                    value={planDate}
-                    onChange={e => setPlanDate(e.target.value)}
-                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddToPlan}
-                    loading={upsertPlanEntry.isPending}
-                  >
-                    Spara
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowPlanPicker(false)}
-                  >
-                    Avbryt
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowPlanPicker(true)}
-                >
-                  <span aria-hidden className="mr-1.5">📅</span>
-                  {planSavedAt ? 'Tillagd i veckoplan' : 'Lägg till i veckoplan'}
-                </Button>
-              )}
-              {recipe.source_url && (
-                <a
-                  href={recipe.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-gray-500 hover:text-emerald-600 underline underline-offset-2"
-                >
-                  Källa ↗
-                </a>
-              )}
-            </div>
-            {planError && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{planError}</p>
-            )}
-          </div>
-        </header>
-
+      <div className="px-[18px] pt-6 flex flex-col gap-6">
         {mode === 'shop' ? (
           <ShopSection
             ingredients={shopIngredients}
@@ -402,61 +379,55 @@ export function RecipePage() {
           />
         )}
 
-        <section>
-          <div className="flex items-center gap-2 pt-2">
-            {confirmDelete ? (
-              <>
-                <span className="text-xs text-gray-600">Ta bort receptet?</span>
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDelete}
-                  loading={deleteRecipe.isPending}
-                >
-                  Ja, ta bort
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setConfirmDelete(false)}
-                >
-                  Avbryt
-                </Button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-              >
-                Ta bort receptet
-              </button>
-            )}
-          </div>
-        </section>
+        {/* Edit + delete */}
+        <div className="flex items-center gap-4 pt-1">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[13px] font-medium text-ink-2 hover:text-ink transition-colors"
+          >
+            Redigera receptet
+          </button>
+          {confirmDelete ? (
+            <span className="flex items-center gap-2 ml-auto">
+              <span className="text-[13px] text-ink-3">Ta bort?</span>
+              <Button type="button" variant="danger" size="sm" onClick={handleDelete} loading={deleteRecipe.isPending}>
+                Ja, ta bort
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                Avbryt
+              </Button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="ml-auto text-[13px] text-ink-4 hover:text-rose transition-colors"
+            >
+              Ta bort receptet
+            </button>
+          )}
+        </div>
       </div>
 
-      <NewRecipeModal
-        open={editing}
-        recipe={recipe}
-        onClose={() => setEditing(false)}
-      />
+      <NewRecipeModal open={editing} recipe={recipe} onClose={() => setEditing(false)} />
     </div>
   )
 }
 
-function Pill({ label, className }: { label: string; className?: string }) {
+function segClass(active: boolean) {
+  return clsx(
+    'inline-flex items-center gap-1.5 px-[15px] py-[7px] rounded-full text-[13.5px] font-medium transition-all',
+    active ? 'bg-surface text-ink shadow-[0_1px_2px_oklch(0.4_0.02_60/0.12)]' : 'text-ink-3 hover:text-ink-2'
+  )
+}
+
+function Stat({ label, value, clay }: { label: string; value: string; clay?: boolean }) {
   return (
-    <span
-      className={clsx(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 font-medium bg-gray-100 text-gray-600',
-        className,
-      )}
-    >
-      {label}
-    </span>
+    <div>
+      <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3 mb-1">{label}</div>
+      <div className={clsx('font-serif text-[18px] font-medium', clay ? 'text-clay' : 'text-ink')}>{value}</div>
+    </div>
   )
 }
 
@@ -489,54 +460,53 @@ function ShopSection({
 }: ShopSectionProps) {
   return (
     <section>
-      <div className="flex items-center justify-between mb-2 px-1">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-          Ingredienser
-        </h2>
-        <button
-          type="button"
-          onClick={onClearSkipped}
-          className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
-        >
+      <div className="flex items-center justify-between px-1.5 pb-1">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">Ingredienser</span>
+        <button type="button" onClick={onClearSkipped} className="text-[13px] font-medium text-clay-deep hover:opacity-80">
           {skipped.size > 0 ? 'Markera alla' : 'Avmarkera alla'}
         </button>
       </div>
-      <p className="text-xs text-gray-500 px-1 mb-2">
-        Bocka av sånt du redan har hemma — bara markerade läggs till.
+      <p className="text-[13px] text-ink-3 px-1.5 pb-2.5">
+        Bocka av sånt du redan har — bara markerade läggs till.
       </p>
-      <ul className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+      <Group divider>
         {ingredients.map(ing => {
           const selected = !skipped.has(ing.key)
           return (
-            <li key={ing.key}>
-              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/80 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={() => onToggle(ing.key)}
-                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className={clsx('flex-1 min-w-0 text-sm truncate', selected ? 'text-gray-900' : 'text-gray-400 line-through')}>
-                  {ing.name}
-                </span>
-                {ing.scaledQuantity && (
-                  <span className={clsx('text-xs whitespace-nowrap', selected ? 'text-gray-500' : 'text-gray-300')}>
-                    {ing.scaledQuantity}
-                  </span>
+            <label key={ing.key} className="flex items-center gap-3 px-4 py-3.5 cursor-pointer">
+              <input type="checkbox" checked={selected} onChange={() => onToggle(ing.key)} className="sr-only" />
+              <span
+                className={clsx(
+                  'w-[22px] h-[22px] rounded-[7px] border-[1.8px] grid place-items-center flex-none transition-colors',
+                  selected ? 'bg-clay border-clay text-white' : 'bg-surface border-hair'
                 )}
-              </label>
-            </li>
+                aria-hidden
+              >
+                {selected && <Check size={13} />}
+              </span>
+              <span className={clsx('flex-1 min-w-0 text-[16px] truncate', selected ? 'text-ink' : 'text-ink-4 line-through')}>
+                {ing.name}
+              </span>
+              {ing.scaledQuantity && (
+                <span className={clsx('text-[15px] tabular-nums whitespace-nowrap flex-none', selected ? 'text-ink-3' : 'text-ink-4')}>
+                  {ing.scaledQuantity}
+                </span>
+              )}
+            </label>
           )
         })}
-      </ul>
+      </Group>
 
       <Button
         type="button"
+        variant="clay"
+        size="lg"
         onClick={onAdd}
         loading={adding}
         disabled={selectedCount === 0 || justAddedCount > 0}
-        className={clsx('mt-3 w-full', justAddedCount > 0 && 'bg-emerald-500')}
+        className="mt-4 w-full"
       >
+        {justAddedCount === 0 && <Plus size={19} />}
         {justAddedCount > 0
           ? `${justAddedCount} tillagda i listan`
           : selectedCount === 0
@@ -580,16 +550,10 @@ function CookSection({
   return (
     <>
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between mb-1 px-1">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            Ingredienser
-          </h2>
+        <div className="flex items-center justify-between px-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">Ingredienser</span>
           {progressDone > 0 && (
-            <button
-              type="button"
-              onClick={onClearProgress}
-              className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
-            >
+            <button type="button" onClick={onClearProgress} className="text-[13px] font-medium text-clay-deep hover:opacity-80">
               Återställ ({progressDone}/{progressTotal})
             </button>
           )}
@@ -597,58 +561,49 @@ function CookSection({
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col gap-1.5">
             {hasNamedSections && (
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3 px-1.5">
                 {section.name.trim() || 'Huvudingredienser'}
               </h3>
             )}
-            <ul className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+            <Group divider>
               {section.ingredients.map(ing => {
                 const done = ingredientsDone.has(ing.id)
                 return (
-                  <li key={ing.id}>
-                    <button
-                      type="button"
-                      onClick={() => onToggleIngredient(ing.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
-                    >
-                      <span
-                        className={clsx(
-                          'inline-flex w-5 h-5 rounded-full border-2 flex-shrink-0 items-center justify-center transition-all',
-                          done
-                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                            : 'border-gray-300 bg-white'
-                        )}
-                        aria-hidden
-                      >
-                        {done && (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </span>
-                      <span className={clsx('flex-1 min-w-0 text-base truncate', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
-                        {ing.name}
-                      </span>
-                      {ing.scaledQuantity && (
-                        <span className={clsx('text-sm font-medium tabular-nums whitespace-nowrap', done ? 'text-gray-300' : 'text-gray-700')}>
-                          {ing.scaledQuantity}
-                        </span>
+                  <button
+                    key={ing.id}
+                    type="button"
+                    onClick={() => onToggleIngredient(ing.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-surface-2 transition-colors"
+                  >
+                    <span
+                      className={clsx(
+                        'w-[22px] h-[22px] rounded-full border-[1.8px] flex-none grid place-items-center transition-all',
+                        done ? 'bg-clay border-clay text-white' : 'border-hair bg-surface'
                       )}
-                    </button>
-                  </li>
+                      aria-hidden
+                    >
+                      {done && <Check size={13} />}
+                    </span>
+                    <span className={clsx('flex-1 min-w-0 text-[17px] truncate', done ? 'text-ink-4 line-through' : 'text-ink')}>
+                      {ing.name}
+                    </span>
+                    {ing.scaledQuantity && (
+                      <span className={clsx('text-[16px] font-medium tabular-nums whitespace-nowrap flex-none', done ? 'text-ink-4' : 'text-ink-2')}>
+                        {ing.scaledQuantity}
+                      </span>
+                    )}
+                  </button>
                 )
               })}
-            </ul>
+            </Group>
           </div>
         ))}
       </section>
 
       {steps.length > 0 ? (
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-            Gör så här
-          </h2>
-          <ol className="flex flex-col gap-2">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3 px-1.5 pb-2">Gör så här</div>
+          <ol className="flex flex-col gap-2.5">
             {steps.map((step, idx) => {
               const done = stepsDone.has(idx)
               return (
@@ -656,31 +611,18 @@ function CookSection({
                   <button
                     type="button"
                     onClick={() => onToggleStep(idx)}
-                    className={clsx(
-                      'w-full bg-white rounded-2xl shadow-sm border text-left p-4 flex gap-3 transition-all',
-                      done
-                        ? 'border-emerald-200/70 bg-emerald-50/40'
-                        : 'border-gray-100 hover:border-gray-200 hover:shadow-md'
-                    )}
+                    className="w-full bg-surface rounded-group shadow-card border border-hair text-left p-4 flex gap-3.5 transition-all"
                   >
                     <span
                       className={clsx(
-                        'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors',
-                        done
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-amber-50 text-amber-700'
+                        'flex-none w-[30px] h-[30px] rounded-full grid place-items-center text-[14px] font-semibold font-serif transition-colors',
+                        done ? 'bg-clay text-white' : 'bg-clay-tint text-clay-deep'
                       )}
                       aria-hidden
                     >
-                      {done ? (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        idx + 1
-                      )}
+                      {done ? <Check size={15} /> : idx + 1}
                     </span>
-                    <p className={clsx('text-base leading-relaxed pt-0.5', done ? 'text-gray-400' : 'text-gray-800')}>
+                    <p className={clsx('text-[15.5px] leading-relaxed pt-1', done ? 'text-ink-4' : 'text-ink')}>
                       {step}
                     </p>
                   </button>
@@ -691,7 +633,7 @@ function CookSection({
         </section>
       ) : (
         <section>
-          <p className="text-sm text-gray-400 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <p className="text-sm text-ink-3 bg-surface rounded-group shadow-card border border-hair p-4">
             Inga instruktioner än. Lägg till dem via <strong>Redigera</strong>.
           </p>
         </section>

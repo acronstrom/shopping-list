@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Link } from '@/lib/icons'
 import {
   useDisconnectMsftTodo,
   useMsftTodoConnection,
@@ -80,16 +81,16 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
 
   return (
     <section>
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
+      <h2 className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em] mb-3 px-1.5">
         Microsoft To Do
       </h2>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+      <div className="bg-surface rounded-group shadow-card border border-hair p-4 flex flex-col gap-3">
         {flash && (
           <div
             className={`text-xs rounded-lg px-3 py-2 flex items-center justify-between gap-3 ${
               flash.status === 'ok'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-red-50 text-red-700'
+                ? 'bg-sage-tint text-sage'
+                : 'bg-rose-tint text-rose'
             }`}
           >
             <span>
@@ -114,7 +115,7 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
           <div className="flex justify-center py-4"><Spinner className="h-5 w-5" /></div>
         ) : !connection ? (
           <>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-2">
               Anslut din Microsoft-konto för att synka uppgifter från en MS To Do-lista
               till hushållets inköpslista. Nya uppgifter får kategori automatiskt.
             </p>
@@ -123,25 +124,25 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
               onClick={handleConnect}
               loading={start.isPending}
             >
-              <span aria-hidden className="mr-1.5">🔗</span>
+              <Link size={17} />
               Anslut Microsoft-konto
             </Button>
           </>
         ) : !connection.list_id ? (
           <>
-            <p className="text-xs text-gray-500">Ansluten som <strong>{connection.connected_email}</strong>.</p>
-            <p className="text-sm text-gray-600">Välj vilken lista som ska synkas.</p>
+            <p className="text-xs text-ink-3">Ansluten som <strong>{connection.connected_email}</strong>.</p>
+            <p className="text-sm text-ink-2">Välj vilken lista som ska synkas.</p>
             {lists.isLoading ? (
               <div className="flex justify-center py-3"><Spinner className="h-4 w-4" /></div>
             ) : lists.error ? (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">
+              <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">
                 Kunde inte hämta listor. {lists.error instanceof Error ? lists.error.message : ''}
               </p>
             ) : (
               <select
                 value={pendingList}
                 onChange={e => setPendingList(e.target.value)}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="rounded-[12px] border border-hair bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
               >
                 <option value="">— Välj lista —</option>
                 {lists.data?.map(l => (
@@ -172,8 +173,8 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
         ) : (
           <>
             <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-gray-900">{connection.list_name}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-ink">{connection.list_name}</p>
+              <p className="text-xs text-ink-3">
                 Ansluten som {connection.connected_email}.
                 {connection.last_synced_at && (
                   <> Senast synkad {formatRelative(connection.last_synced_at)}.</>
@@ -181,12 +182,12 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
               </p>
             </div>
             {connection.last_sync_error && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">
+              <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">
                 {connection.last_sync_error}
               </p>
             )}
             {syncFeedback && (
-              <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2.5 py-1.5">
+              <p className="text-xs text-sage bg-sage-tint rounded-[12px] px-2.5 py-1.5">
                 {syncFeedback}
               </p>
             )}
@@ -212,7 +213,7 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
         )}
 
         {error && (
-          <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{error}</p>
+          <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{error}</p>
         )}
       </div>
     </section>

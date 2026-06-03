@@ -1,12 +1,3 @@
-export const NAV_ITEMS = [
-  { to: '/', label: 'Lista', icon: '🛒' },
-  { to: '/plan', label: 'Veckoplan', icon: '📅' },
-  { to: '/recipes', label: 'Recept', icon: '📖' },
-  { to: '/stores', label: 'Butiker', icon: '🏪' },
-  { to: '/history', label: 'Historik', icon: '📋' },
-  { to: '/settings', label: 'Inställningar', icon: '⚙️' },
-] as const
-
 export const CATEGORIES = [
   'Frukt & Grönt',
   'Mejeri & Ägg',
@@ -26,21 +17,27 @@ export const CATEGORIES = [
   'Övrigt',
 ] as const
 
-export const CATEGORY_COLORS: Record<string, string> = {
-  'Frukt & Grönt':      'bg-green-100 text-green-800',
-  'Mejeri & Ägg':       'bg-blue-100 text-blue-800',
-  'Kött & Chark':       'bg-red-100 text-red-800',
-  'Fisk & Skaldjur':    'bg-sky-100 text-sky-800',
-  'Bröd':               'bg-amber-100 text-amber-800',
-  'Bageri & Fikabröd':  'bg-yellow-100 text-yellow-800',
-  'Fryst':              'bg-cyan-100 text-cyan-800',
-  'Skafferi':           'bg-orange-100 text-orange-800',
-  'Snacks & Godis':     'bg-pink-100 text-pink-800',
-  'Dryck':              'bg-purple-100 text-purple-800',
-  'Hygien':             'bg-fuchsia-100 text-fuchsia-800',
-  'Tvätt & Städ':       'bg-slate-100 text-slate-800',
-  'Papper & Hushåll':   'bg-stone-100 text-stone-800',
-  'Djurmat':            'bg-lime-100 text-lime-800',
-  'Barn & Familj':      'bg-violet-100 text-violet-800',
-  'Övrigt':             'bg-gray-100 text-gray-600',
+/* Category → dot color utility (redesign). The 16 Swedish categories share the
+   11 token hues from index.css; utility-class literals so Tailwind keeps them. */
+export const CATEGORY_DOT_COLORS: Record<string, string> = {
+  'Frukt & Grönt':      'bg-c-produce',
+  'Mejeri & Ägg':       'bg-c-dairy',
+  'Kött & Chark':       'bg-c-meat',
+  'Fisk & Skaldjur':    'bg-c-fish',
+  'Bröd':               'bg-c-bread',
+  'Bageri & Fikabröd':  'bg-c-bakery',
+  'Fryst':              'bg-c-frozen',
+  'Skafferi':           'bg-c-pantry',
+  'Snacks & Godis':     'bg-c-snacks',
+  'Dryck':              'bg-c-drink',
+  'Hygien':             'bg-c-fish',
+  'Tvätt & Städ':       'bg-c-drink',
+  'Papper & Hushåll':   'bg-c-pantry',
+  'Djurmat':            'bg-c-produce',
+  'Barn & Familj':      'bg-c-snacks',
+  'Övrigt':             'bg-c-other',
+}
+
+export function categoryDotClass(category: string): string {
+  return CATEGORY_DOT_COLORS[category] ?? 'bg-c-other'
 }

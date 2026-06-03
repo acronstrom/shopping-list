@@ -1,4 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap');
 @import "tailwindcss";
+
+/* ============================================================
+   Skafferi redesign tokens — warm paper, ink, one clay accent.
+   Exposed to Tailwind v4 as theme utilities (bg-paper, text-clay,
+   border-hair, rounded-group, shadow-card, font-serif, …) and as
+   :root custom properties for inline use (var(--color-clay), …).
+   ============================================================ */
+@theme {
+  /* Type */
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-sans: -apple-system, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Surfaces — warm paper */
+  --color-paper:     oklch(0.984 0.006 75);
+  --color-surface:   oklch(1 0 0);
+  --color-surface-2: oklch(0.965 0.006 75);
+
+  /* Ink */
+  --color-ink:   oklch(0.255 0.012 60);
+  --color-ink-2: oklch(0.46 0.012 60);
+  --color-ink-3: oklch(0.62 0.010 60);
+  --color-ink-4: oklch(0.74 0.008 60);
+
+  /* Lines */
+  --color-hair:   oklch(0.915 0.006 70);
+  --color-hair-2: oklch(0.945 0.005 72);
+
+  /* Accent — clay / terracotta */
+  --color-clay:      oklch(0.605 0.132 47);
+  --color-clay-deep: oklch(0.50 0.125 45);
+  --color-clay-tint: oklch(0.95 0.028 60);
+  --color-clay-line: oklch(0.88 0.05 55);
+
+  /* Support accent — muted sage */
+  --color-sage:      oklch(0.55 0.055 145);
+  --color-sage-tint: oklch(0.95 0.022 145);
+
+  /* Status */
+  --color-rose:      oklch(0.58 0.13 25);
+  --color-rose-tint: oklch(0.95 0.03 25);
+
+  /* Category dots — low chroma, shared L/C, hue varies */
+  --color-c-produce: oklch(0.62 0.075 145);
+  --color-c-dairy:   oklch(0.62 0.075 250);
+  --color-c-meat:    oklch(0.62 0.085 25);
+  --color-c-fish:    oklch(0.62 0.075 220);
+  --color-c-bread:   oklch(0.64 0.075 70);
+  --color-c-bakery:  oklch(0.66 0.08 85);
+  --color-c-frozen:  oklch(0.62 0.07 200);
+  --color-c-pantry:  oklch(0.62 0.08 55);
+  --color-c-snacks:  oklch(0.62 0.075 350);
+  --color-c-drink:   oklch(0.58 0.08 300);
+  --color-c-other:   oklch(0.66 0.012 60);
+
+  /* Radii */
+  --radius-card:  22px;
+  --radius-group: 16px;
+  --radius-row:   12px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px oklch(0.4 0.02 60 / 0.05), 0 8px 24px -16px oklch(0.4 0.02 60 / 0.22);
+  --shadow-pop:  0 12px 40px -12px oklch(0.4 0.02 60 / 0.30);
+}
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -26,15 +90,12 @@ select {
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(16, 185, 129, 0.06), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(99, 102, 241, 0.05), transparent 60%),
-    #f8fafc;
-  color: #0f172a;
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11', 'ss01', 'ss03';
 }
 
 #root {
@@ -69,9 +130,9 @@ body {
 }
 
 @keyframes row-complete {
-  0%   { background-color: rgba(16, 185, 129, 0); }
-  35%  { background-color: rgba(16, 185, 129, 0.14); }
-  100% { background-color: rgba(16, 185, 129, 0); }
+  0%   { background-color: oklch(0.605 0.132 47 / 0); }
+  35%  { background-color: oklch(0.605 0.132 47 / 0.12); }
+  100% { background-color: oklch(0.605 0.132 47 / 0); }
 }
 
 @keyframes confetti-fall {

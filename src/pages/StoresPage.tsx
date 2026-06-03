@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Header } from '@/components/layout/Header'
+import { PageHeader, HeaderIconButton } from '@/components/layout/PageHeader'
 import { StoreCard } from '@/components/stores/StoreCard'
 import { useStores, useAddStore } from '@/hooks/useStores'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Plus } from '@/lib/icons'
 
 export function StoresPage() {
   const { data: stores = [], isLoading } = useStores()
@@ -29,8 +30,15 @@ export function StoresPage() {
 
   return (
     <div>
-      <Header title="Butiker" action={{ label: '+ Lägg till butik', onClick: () => setOpen(true) }} />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <PageHeader
+        title="Butiker"
+        right={
+          <HeaderIconButton aria-label="Lägg till butik" onClick={() => setOpen(true)}>
+            <Plus size={20} />
+          </HeaderIconButton>
+        }
+      />
+      <div className="px-[18px] pt-2 flex flex-col gap-3">
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
         ) : stores.length === 0 ? (
@@ -55,7 +63,7 @@ export function StoresPage() {
             required
             autoFocus
           />
-          {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)} className="flex-1">
               Avbryt

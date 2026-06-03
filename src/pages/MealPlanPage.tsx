@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Header } from '@/components/layout/Header'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
@@ -22,6 +22,7 @@ import {
   startOfWeek,
   WEEKDAY_NAMES_LONG_SV,
 } from '@/lib/week'
+import { Book, Cart, ChevronLeft, ChevronRight, Plus, Minus, Trash } from '@/lib/icons'
 import { clsx } from 'clsx'
 
 const MONTHS_SV = [
@@ -46,6 +47,7 @@ export function MealPlanPage() {
   const today = useMemo(() => new Date(), [])
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
   const weekNumber = useMemo(() => isoWeekNumber(weekStart), [weekStart])
+  const isCurrentWeek = isSameDay(weekStart, startOfWeek(today))
 
   const plannedEntries = days.filter(d => d.entry).map(d => d.entry!)
 
@@ -92,50 +94,48 @@ export function MealPlanPage() {
   }
 
   return (
-    <div className="pb-16">
-      <Header title="Veckoplan" />
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3">
+    <div>
+      <PageHeader title="Veckoplan" />
+      <div className="px-[18px] pt-2 flex flex-col gap-3">
+        <div className="flex items-center justify-between bg-surface rounded-group shadow-card border border-hair px-2 py-2.5">
           <button
             type="button"
             onClick={() => setWeekStart(prev => addDays(prev, -7))}
-            className="p-2 -ml-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            className="w-9 h-9 grid place-items-center rounded-full text-ink hover:bg-surface-2 flex-none"
             aria-label="Föregående vecka"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeft size={18} />
           </button>
           <div className="text-center">
-            <p className="text-sm font-semibold text-gray-900">{formatRangeLabel()}</p>
-            <button
-              type="button"
-              onClick={() => setWeekStart(startOfWeek(new Date()))}
-              className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700"
-            >
-              Denna vecka
-            </button>
+            <p className="font-serif text-[18px] font-medium text-ink whitespace-nowrap">{formatRangeLabel()}</p>
+            {isCurrentWeek ? (
+              <p className="text-[12px] font-medium text-clay-deep">Denna vecka</p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setWeekStart(startOfWeek(new Date()))}
+                className="text-[12px] font-medium text-clay-deep hover:opacity-80"
+              >
+                Till denna vecka
+              </button>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setWeekStart(prev => addDays(prev, 7))}
-            className="p-2 -mr-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            className="w-9 h-9 grid place-items-center rounded-full text-ink hover:bg-surface-2 flex-none"
             aria-label="Nästa vecka"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight size={18} />
           </button>
         </div>
 
-        {error && (
-          <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>
-        )}
+        {error && <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Spinner className="h-6 w-6" /></div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5 mt-1">
             {days.map((day, idx) => (
               <DayCard
                 key={day.date}
@@ -157,14 +157,17 @@ export function MealPlanPage() {
           </div>
         )}
 
-        <div className="sticky bottom-4 mt-2">
+        <div className="sticky bottom-[92px] mt-2">
           <Button
             type="button"
+            variant="clay"
+            size="lg"
             onClick={openPreview}
             loading={generate.preview.isPending}
             disabled={plannedEntries.length === 0}
-            className="w-full shadow-lg"
+            className="w-full"
           >
+            {committedAt ? null : plannedEntries.length > 0 && <Cart size={19} />}
             {committedAt
               ? 'Tillagd i inköpslistan'
               : plannedEntries.length === 0
@@ -187,34 +190,24 @@ export function MealPlanPage() {
         title={`Lägg till ${previewLines.length} ingredienser`}
       >
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-3">
             Dubbletter har slagits ihop och mängderna är skalade till antalet portioner du planerat.
           </p>
-          <ul className="bg-gray-50 rounded-xl divide-y divide-gray-200/70 max-h-[50vh] overflow-y-auto">
+          <ul className="bg-surface-2 rounded-[14px] divide-y divide-hair max-h-[50vh] overflow-y-auto">
             {previewLines.map((line, i) => (
               <li key={`${line.name}-${i}`} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-sm text-gray-900 truncate">{line.name}</span>
+                <span className="text-sm text-ink truncate">{line.name}</span>
                 {line.quantity && (
-                  <span className="text-xs text-gray-500 whitespace-nowrap tabular-nums">{line.quantity}</span>
+                  <span className="text-[13px] text-ink-3 whitespace-nowrap tabular-nums">{line.quantity}</span>
                 )}
               </li>
             ))}
           </ul>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={() => setPreviewOpen(false)}
-            >
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setPreviewOpen(false)}>
               Avbryt
             </Button>
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={confirmGenerate}
-              loading={generate.commit.isPending}
-            >
+            <Button type="button" variant="clay" className="flex-1" onClick={confirmGenerate} loading={generate.commit.isPending}>
               Lägg till i listan
             </Button>
           </div>
@@ -261,14 +254,14 @@ function DayCard({
         type="button"
         onClick={onAddRecipe}
         className={clsx(
-          'w-full flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-colors text-left',
-          isToday
-            ? 'border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50'
-            : 'border-gray-200 hover:bg-gray-50',
+          'w-full flex items-center gap-3 p-2.5 rounded-[18px] border border-dashed transition-colors text-left',
+          isToday ? 'border-clay-line bg-clay-tint' : 'border-hair hover:bg-surface-2',
         )}
       >
         <DateBubble weekdayName={weekdayName} dayNumber={dayNumber} monthShort={monthShort} isToday={isToday} />
-        <span className="text-sm text-gray-500 flex-1">+ Lägg till recept</span>
+        <span className="text-sm text-ink-3 flex-1 flex items-center gap-1.5">
+          <Plus size={17} /> Lägg till recept
+        </span>
       </button>
     )
   }
@@ -280,33 +273,31 @@ function DayCard({
   return (
     <div
       className={clsx(
-        'rounded-2xl border bg-white shadow-sm flex flex-col',
-        isToday ? 'border-emerald-200' : 'border-gray-100',
+        'rounded-[18px] border bg-surface shadow-card flex flex-col',
+        isToday ? 'border-clay-line' : 'border-hair',
         status === 'cooked' && 'opacity-80',
         status === 'skipped' && 'opacity-60',
       )}
     >
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-center gap-3 p-2.5">
         <DateBubble weekdayName={weekdayName} dayNumber={dayNumber} monthShort={monthShort} isToday={isToday} />
         <button
           type="button"
           onClick={() => navigate(`/recipes/${recipe.id}`)}
-          className="flex-1 min-w-0 flex items-center gap-2 text-left"
+          className="flex-1 min-w-0 flex items-center gap-2.5 text-left"
         >
           {imageUrl ? (
-            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-              <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-            </div>
+            <img src={imageUrl} alt="" className="w-11 h-11 rounded-[12px] object-cover bg-surface-2 flex-none" />
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-              <span className="text-base" aria-hidden>📖</span>
+            <div className="w-11 h-11 rounded-[12px] bg-surface-2 border border-hair grid place-items-center text-ink-3 flex-none">
+              <Book size={20} />
             </div>
           )}
           <div className="min-w-0">
-            <p className={clsx('text-sm font-medium truncate', status === 'skipped' ? 'line-through text-gray-400' : 'text-gray-900')}>
+            <p className={clsx('font-serif text-[17px] font-medium tracking-[-0.01em] truncate', status === 'skipped' ? 'line-through text-ink-4' : 'text-ink')}>
               {recipe.name}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-[12.5px] text-ink-3">
               {servings} portioner
               {recipe.category && <> · {recipe.category}</>}
             </p>
@@ -316,42 +307,42 @@ function DayCard({
           type="button"
           onClick={onDelete}
           aria-label="Ta bort från veckoplan"
-          className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50"
+          className="w-9 h-9 grid place-items-center rounded-full text-ink-4 hover:text-rose hover:bg-rose-tint flex-none"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <Trash size={16} />
         </button>
       </div>
 
-      <div className="flex items-center gap-3 px-3 pb-3 flex-wrap">
-        <div className="inline-flex rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="flex items-center gap-2.5 px-2.5 pb-2.5 flex-wrap">
+        <div className="inline-flex items-center gap-0.5 rounded-[10px] bg-surface-2 border border-hair p-0.5">
           <button
             type="button"
             onClick={() => onChangeServings(Math.max(1, servings - 1))}
-            className="px-2.5 text-gray-500 hover:bg-gray-50"
+            className="px-2 py-1 text-ink-2 hover:text-ink"
             aria-label="Minska portioner"
-          >−</button>
-          <span className="px-3 py-1.5 text-xs font-medium text-gray-900 min-w-[2rem] text-center">
-            {servings}
-          </span>
+          >
+            <Minus size={14} />
+          </button>
+          <span className="px-1.5 text-[13px] font-medium text-ink min-w-[1.5rem] text-center tabular-nums">{servings}</span>
           <button
             type="button"
             onClick={() => onChangeServings(servings + 1)}
-            className="px-2.5 text-gray-500 hover:bg-gray-50"
+            className="px-2 py-1 text-ink-2 hover:text-ink"
             aria-label="Öka portioner"
-          >+</button>
+          >
+            <Plus size={14} />
+          </button>
         </div>
 
-        <div className="inline-flex rounded-xl bg-gray-100 p-0.5 text-[11px] font-medium">
+        <div className="inline-flex rounded-[10px] bg-surface-2 border border-hair p-0.5 text-[11px] font-medium">
           {(['planned', 'cooked', 'skipped'] as const).map(s => (
             <button
               key={s}
               type="button"
               onClick={() => onChangeStatus(s)}
               className={clsx(
-                'px-2.5 py-1 rounded-lg transition-colors',
-                status === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                'px-2.5 py-1 rounded-[8px] transition-colors',
+                status === s ? 'bg-surface text-ink shadow-[0_1px_2px_oklch(0.4_0.02_60/0.12)]' : 'text-ink-3 hover:text-ink-2',
               )}
             >
               {s === 'planned' ? 'Planerad' : s === 'cooked' ? 'Lagad' : 'Hoppade över'}
@@ -377,13 +368,13 @@ function DateBubble({
   return (
     <div
       className={clsx(
-        'w-14 flex-shrink-0 flex flex-col items-center justify-center rounded-xl py-1.5',
-        isToday ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-700',
+        'w-[52px] flex-none flex flex-col items-center justify-center rounded-[14px] py-2',
+        isToday ? 'bg-clay text-white' : 'bg-surface-2 text-ink-2 border border-hair',
       )}
     >
-      <span className="text-[10px] uppercase tracking-wide">{weekdayName.slice(0, 3)}</span>
-      <span className="text-lg font-semibold leading-none mt-0.5">{dayNumber}</span>
-      <span className="text-[10px] opacity-80">{monthShort}</span>
+      <span className="text-[10.5px] uppercase tracking-[0.08em] opacity-80">{weekdayName.slice(0, 3)}</span>
+      <span className="font-serif text-[21px] font-medium leading-none my-0.5">{dayNumber}</span>
+      <span className="text-[10px] opacity-75">{monthShort}</span>
     </div>
   )
 }

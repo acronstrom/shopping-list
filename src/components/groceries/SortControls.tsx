@@ -9,27 +9,24 @@ export function SortControls() {
   if (stores.length === 0) return null
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Sortera efter:</span>
-      <div className="flex gap-1.5 flex-wrap">
-        <Pill active={!selectedStoreId} onClick={() => setSelectedStoreId(null)}>
-          Kategori
-        </Pill>
-        {stores.map(store => (
-          <Pill
-            key={store.id}
-            active={selectedStoreId === store.id}
-            onClick={() => setSelectedStoreId(store.id)}
-          >
-            {store.name}
-          </Pill>
-        ))}
-      </div>
+    <div className="flex gap-2 overflow-x-auto -mx-[18px] px-[18px] pb-0.5">
+      <Chip active={!selectedStoreId} onClick={() => setSelectedStoreId(null)}>
+        Kategori
+      </Chip>
+      {stores.map(store => (
+        <Chip
+          key={store.id}
+          active={selectedStoreId === store.id}
+          onClick={() => setSelectedStoreId(store.id)}
+        >
+          {store.name}
+        </Chip>
+      ))}
     </div>
   )
 }
 
-function Pill({
+function Chip({
   active,
   onClick,
   children,
@@ -42,10 +39,10 @@ function Pill({
     <button
       onClick={onClick}
       className={clsx(
-        'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 active:scale-95',
+        'flex-none px-[13px] py-[7px] rounded-full text-[13px] font-medium border whitespace-nowrap transition-all active:scale-95',
         active
-          ? 'bg-gray-900 text-white shadow-sm'
-          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+          ? 'bg-ink text-paper border-ink'
+          : 'bg-surface text-ink-2 border-hair hover:bg-surface-2'
       )}
     >
       {children}

@@ -4,6 +4,7 @@ import { useAddGrocery, useDeleteGrocery, useGroceries } from '@/hooks/useGrocer
 import { useFrequentlyBoughtNames, type FrequentItem } from '@/hooks/usePurchaseHistory'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Spark, ChevronDown, Check, Plus } from '@/lib/icons'
 import { clsx } from 'clsx'
 import type { StoreOffer } from '@/types'
 
@@ -33,20 +34,6 @@ interface Props {
   storeName: string
   hasUrl: boolean
   scrapedAt: string | null
-}
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  'Frukt & Grönt': '🥬',
-  'Färskvaror': '🥩',
-  'Mejeri': '🥛',
-  'Bröd, kex & bageri': '🥖',
-  'Djupfryst': '🧊',
-  'Skafferivaror': '🥫',
-  'Dryck': '🥤',
-  'Hälsa & skönhet': '💄',
-  'Hem & fritid': '🏡',
-  'Djur': '🐾',
-  'Barn': '🍼',
 }
 
 function formatScrapedAt(iso: string | null): string | null {
@@ -119,7 +106,7 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
 
   if (!hasUrl) {
     return (
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-4">
         Lägg till en länk ovan för att kunna hämta erbjudanden hit.
       </p>
     )
@@ -128,7 +115,7 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-xs text-gray-400 min-w-0 truncate">
+        <div className="text-xs text-ink-4 min-w-0 truncate">
           {refresh.isPending
             ? 'Hämtar erbjudanden…'
             : scrapedAt
@@ -147,13 +134,13 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
       </div>
 
       {error && (
-        <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5">{error}</p>
+        <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{error}</p>
       )}
 
       {isLoading ? (
         <div className="flex justify-center py-4"><Spinner className="h-5 w-5" /></div>
       ) : offers.length === 0 ? (
-        <p className="text-xs text-gray-400 py-2">
+        <p className="text-xs text-ink-4 py-2">
           {scrapedAt
             ? 'Inga erbjudanden hittades på sidan.'
             : 'Tryck "Hämta" för att läsa in aktuella erbjudanden.'}
@@ -161,15 +148,15 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
       ) : (
         <>
           {frequentMatches.length > 0 && !query && (
-            <div className="bg-white rounded-xl border border-emerald-200/80 overflow-hidden shadow-sm">
-              <div className="px-3 py-2 bg-emerald-50/60 border-b border-emerald-100/80 flex items-center justify-between">
-                <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
-                  <span aria-hidden>⭐</span>
+            <div className="bg-surface rounded-[14px] border border-clay-line overflow-hidden shadow-card">
+              <div className="px-3 py-2 bg-clay-tint border-b border-clay-line flex items-center justify-between">
+                <p className="text-xs font-semibold text-clay-deep flex items-center gap-1.5">
+                  <Spark size={14} />
                   Du köper ofta
                 </p>
-                <span className="text-xs text-emerald-600/80">{frequentMatches.length}</span>
+                <span className="text-xs text-clay-deep/80">{frequentMatches.length}</span>
               </div>
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-hair-2">
                 {frequentMatches.map(({ offer, match }) => (
                   <OfferRow
                     key={`fav-${offer.id}`}
@@ -188,44 +175,37 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Sök bland erbjudandena…"
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full rounded-[14px] border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
           />
 
           {grouped.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2 text-center">
+            <p className="text-xs text-ink-4 py-2 text-center">
               Inga träffar.
             </p>
           ) : (
             <div className="flex flex-col gap-2">
               {grouped.map(({ category, items }) => {
                 const isOpen = expanded[category] ?? !!query
-                const emoji = CATEGORY_EMOJI[category] ?? '🛒'
                 return (
                   <div
                     key={category}
-                    className="bg-white rounded-xl border border-gray-200/80 overflow-hidden"
+                    className="bg-surface rounded-[14px] border border-hair overflow-hidden"
                   >
                     <button
                       type="button"
                       onClick={() => toggle(category)}
-                      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50/80 transition-colors"
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-surface-2 transition-colors"
                     >
                       <span className="flex items-center gap-2 min-w-0">
-                        <span aria-hidden className="text-base">{emoji}</span>
-                        <span className="text-sm font-medium text-gray-900 truncate">
+                        <span className="text-sm font-medium text-ink truncate">
                           {category}
                         </span>
-                        <span className="text-xs text-gray-400">{items.length}</span>
+                        <span className="text-xs text-ink-4">{items.length}</span>
                       </span>
-                      <svg
-                        className={clsx('w-4 h-4 text-gray-400 transition-transform flex-shrink-0', isOpen && 'rotate-180')}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <ChevronDown size={16} className={clsx('text-ink-4 transition-transform flex-shrink-0', isOpen && 'rotate-180')} />
                     </button>
                     {isOpen && (
-                      <ul className="divide-y divide-gray-100 border-t border-gray-100">
+                      <ul className="divide-y divide-hair-2 border-t border-hair">
                         {items.map(offer => (
                           <OfferRow
                             key={offer.id}
@@ -293,29 +273,29 @@ function OfferRow({
     <li
       className={clsx(
         'px-3 py-2.5 flex items-start justify-between gap-3',
-        alreadyInList && 'bg-emerald-50/40'
+        alreadyInList && 'bg-clay-tint/50'
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className={clsx('text-sm font-medium truncate', alreadyInList ? 'text-gray-500' : 'text-gray-900')}>
+        <p className={clsx('text-sm font-medium truncate', alreadyInList ? 'text-ink-3' : 'text-ink')}>
           {offer.name}
         </p>
-        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-ink-3 mt-0.5">
           {frequencyBadge && (
-            <span className="text-emerald-700 font-medium">{frequencyBadge}</span>
+            <span className="text-clay-deep font-medium">{frequencyBadge}</span>
           )}
           {offer.brand && <span>{offer.brand}</span>}
           {offer.unit && <span>{offer.unit}</span>}
           {offer.comparison_price && <span>Jmf {offer.comparison_price}</span>}
-          {validToLabel && <span className="text-amber-600">t.o.m. {validToLabel}</span>}
+          {validToLabel && <span className="text-clay-deep">t.o.m. {validToLabel}</span>}
         </div>
         {offer.valid_period && (
-          <p className="text-xs text-gray-400 mt-0.5 italic">{offer.valid_period}</p>
+          <p className="text-xs text-ink-4 mt-0.5 italic">{offer.valid_period}</p>
         )}
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         {offer.price && (
-          <span className={clsx('text-sm font-semibold whitespace-nowrap', alreadyInList ? 'text-gray-400' : 'text-emerald-600')}>
+          <span className={clsx('text-sm font-semibold whitespace-nowrap', alreadyInList ? 'text-ink-4' : 'text-clay-deep')}>
             {offer.price}
           </span>
         )}
@@ -327,19 +307,11 @@ function OfferRow({
           className={clsx(
             'inline-flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-95 disabled:opacity-50',
             alreadyInList
-              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-              : 'bg-gray-100 text-gray-500 hover:bg-emerald-100 hover:text-emerald-600'
+              ? 'bg-clay text-white hover:bg-clay-deep'
+              : 'bg-surface-2 text-ink-3 hover:bg-clay-tint hover:text-clay-deep'
           )}
         >
-          {alreadyInList ? (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          )}
+          {alreadyInList ? <Check size={16} /> : <Plus size={16} sw={2.5} />}
         </button>
       </div>
     </li>

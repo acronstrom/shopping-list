@@ -14,6 +14,7 @@ import { RecipePage } from '@/pages/RecipePage'
 import { MealPlanPage } from '@/pages/MealPlanPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { MerPage } from '@/pages/MerPage'
 
 function AppRoutes() {
   const { householdId, isLoading } = useAuth()
@@ -30,6 +31,7 @@ function AppRoutes() {
           <Route path="/recipes" element={<RecipesPage />} />
           <Route path="/recipes/:id" element={<RecipePage />} />
           <Route path="/stores" element={<StoresPage />} />
+          <Route path="/more" element={<MerPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

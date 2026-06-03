@@ -32,9 +32,9 @@ export function InviteMemberForm() {
         placeholder="familj@exempel.se"
         required
       />
-      {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
       {success && (
-        <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+        <p className="text-sm text-sage bg-sage-tint rounded-[12px] px-3 py-2">
           Inbjudan skickad! De ser den när de loggar in.
         </p>
       )}

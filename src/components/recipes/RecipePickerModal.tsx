@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
+import { Book, Clock, HeartFill } from '@/lib/icons'
 import { useRecipes, useRecipeImageUrl } from '@/hooks/useRecipes'
 import type { RecipeWithIngredients } from '@/types'
 
@@ -39,17 +40,17 @@ export function RecipePickerModal({ open, onClose, onSelect, title = 'Välj rece
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Sök recept, kategori eller tagg"
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          className="rounded-[14px] border border-hair bg-surface px-3 py-2.5 text-[16px] text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
         />
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Spinner className="h-5 w-5" /></div>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">
+          <p className="text-sm text-ink-3 text-center py-8">
             {query.trim() ? 'Inga recept matchar din sökning.' : 'Inga recept att välja mellan än.'}
           </p>
         ) : (
-          <ul className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+          <ul className="bg-surface rounded-group border border-hair overflow-hidden divide-y divide-hair-2 max-h-[60vh] overflow-y-auto">
             {filtered.map(recipe => (
               <li key={recipe.id}>
                 <RecipePickerRow
@@ -82,30 +83,28 @@ function RecipePickerRow({
     <button
       type="button"
       onClick={onSelect}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+      className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-surface-2 transition-colors"
     >
       {imageUrl ? (
-        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-        </div>
+        <img src={imageUrl} alt="" className="w-10 h-10 rounded-[10px] object-cover flex-none bg-surface-2" />
       ) : (
-        <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-base" aria-hidden>📖</span>
+        <div className="w-10 h-10 bg-surface-2 border border-hair rounded-[10px] grid place-items-center text-ink-3 flex-none">
+          <Book size={18} />
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900 truncate">{recipe.name}</p>
-        <div className="flex flex-wrap gap-x-2 text-xs text-gray-400 mt-0.5">
+        <p className="text-[15px] text-ink truncate">{recipe.name}</p>
+        <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-ink-3 mt-0.5">
           {recipe.category && <span>{recipe.category}</span>}
           {totalMinutes > 0 && (
             <>
-              {recipe.category && <span>·</span>}
-              <span>⏱ {totalMinutes} min</span>
+              {recipe.category && <span className="text-ink-4">·</span>}
+              <span className="flex items-center gap-1"><Clock size={13} /> {totalMinutes} min</span>
             </>
           )}
         </div>
       </div>
-      {recipe.is_favorite && <span aria-hidden className="text-rose-500 text-sm">♥</span>}
+      {recipe.is_favorite && <span className="text-clay flex-none" aria-label="Favorit"><HeartFill size={14} /></span>}
     </button>
   )
 }

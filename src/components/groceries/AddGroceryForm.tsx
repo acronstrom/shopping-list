@@ -4,6 +4,7 @@ import { useParseRecipe, type ParsedIngredient } from '@/hooks/useParseRecipe'
 import { fileToCompressedDataUrl } from '@/lib/image'
 import { dedupeIngredients } from '@/lib/parseIngredient'
 import { RecipeImportModal } from './RecipeImportModal'
+import { Camera, Plus } from '@/lib/icons'
 import { clsx } from 'clsx'
 
 export function AddGroceryForm() {
@@ -71,50 +72,41 @@ export function AddGroceryForm() {
       <form
         onSubmit={handleSubmit}
         className={clsx(
-          'bg-white rounded-2xl border p-2 transition-all duration-200',
-          focused
-            ? 'border-emerald-300 shadow-[0_8px_24px_-12px_rgba(16,185,129,0.35)]'
-            : 'border-gray-200/80 shadow-sm'
+          'flex items-center gap-2.5 bg-surface rounded-[16px] border p-2 pl-4 shadow-card transition-colors duration-200',
+          focused ? 'border-clay-line' : 'border-hair'
         )}
       >
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="w-11 h-11 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 border border-gray-200/80 hover:bg-gray-100 active:scale-95 transition-all"
-            aria-label="Läs in från recept"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 0 1 2-2h2.382a1 1 0 0 0 .894-.553l.724-1.447A1 1 0 0 1 9.894 4.5h4.212a1 1 0 0 1 .894.553l.724 1.447A1 1 0 0 0 16.618 7H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
-              <circle cx="12" cy="13" r="3.5" />
-            </svg>
-          </button>
-          <input
-            ref={inputRef}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Lägg till en vara…"
-            className="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            disabled={!name.trim() || addGrocery.isPending}
-            className={clsx(
-              'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200',
-              name.trim()
-                ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-[0_6px_16px_-6px_rgba(16,185,129,0.6)] hover:from-emerald-500 hover:to-emerald-700 active:scale-95'
-                : 'bg-gray-100 text-gray-300'
-            )}
-            aria-label="Lägg till vara"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="w-10 h-10 flex-none grid place-items-center rounded-[12px] bg-surface-2 text-ink-2 border border-hair hover:bg-surface active:scale-95 transition-all"
+          aria-label="Läs in från recept"
+        >
+          <Camera size={20} />
+        </button>
+        <input
+          ref={inputRef}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="Lägg till en vara…"
+          className="flex-1 min-w-0 bg-transparent text-[16px] text-ink placeholder:text-ink-4 focus:outline-none"
+          autoComplete="off"
+        />
+        <button
+          type="submit"
+          disabled={!name.trim() || addGrocery.isPending}
+          className={clsx(
+            'w-10 h-10 flex-none grid place-items-center rounded-[12px] transition-all duration-200',
+            name.trim()
+              ? 'bg-clay text-white shadow-[0_6px_16px_-8px_var(--color-clay)] hover:bg-clay-deep active:scale-95'
+              : 'bg-surface-2 text-ink-4'
+          )}
+          aria-label="Lägg till vara"
+        >
+          <Plus size={20} sw={2.2} />
+        </button>
         <input
           ref={fileRef}
           type="file"

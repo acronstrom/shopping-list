@@ -2,7 +2,7 @@ import { type ButtonHTMLAttributes } from 'react'
 import { clsx } from 'clsx'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'clay' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
 }
@@ -20,15 +20,16 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 font-medium tracking-[-0.01em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
         {
-          'bg-green-600 text-white hover:bg-green-700 active:bg-green-800': variant === 'primary',
-          'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:bg-gray-100': variant === 'secondary',
-          'text-gray-600 hover:bg-gray-100 active:bg-gray-200': variant === 'ghost',
-          'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100': variant === 'danger',
-          'px-3 py-1.5 text-sm': size === 'sm',
-          'px-4 py-2.5 text-sm': size === 'md',
-          'px-5 py-3 text-base': size === 'lg',
+          'bg-ink text-paper hover:opacity-90 active:opacity-80': variant === 'primary',
+          'bg-clay text-white shadow-[0_8px_20px_-10px_var(--color-clay)] hover:bg-clay-deep active:bg-clay-deep': variant === 'clay',
+          'bg-surface text-ink border border-hair shadow-card hover:bg-surface-2': variant === 'secondary',
+          'text-ink-2 hover:bg-surface-2 active:bg-surface-2': variant === 'ghost',
+          'bg-rose-tint text-rose hover:opacity-90 active:opacity-80': variant === 'danger',
+          'px-3.5 py-2 text-sm rounded-[11px]': size === 'sm',
+          'px-4 py-2.5 text-sm rounded-[13px]': size === 'md',
+          'px-5 py-3.5 text-base rounded-[14px]': size === 'lg',
         },
         className
       )}

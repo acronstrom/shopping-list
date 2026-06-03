@@ -1,6 +1,7 @@
 import { useGroceries, useAddGrocery } from '@/hooks/useGroceries'
 import { useSuggestions } from '@/hooks/usePurchaseHistory'
 import { capitalizeFirst } from '@/lib/text'
+import { Plus, Spark } from '@/lib/icons'
 
 export function SuggestionBar() {
   const { data: items = [] } = useGroceries()
@@ -10,18 +11,19 @@ export function SuggestionBar() {
   if (suggestions.length === 0) return null
 
   return (
-    <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/70 p-3">
-      <p className="text-xs font-medium text-gray-500 mb-2 px-1">Förslag för dig</p>
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+    <div>
+      <div className="flex items-center gap-1.5 mb-2.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+        <Spark size={14} />
+        Förslag för dig
+      </div>
+      <div className="flex gap-2 overflow-x-auto -mx-[18px] px-[18px] pb-0.5">
         {suggestions.map(s => (
           <button
             key={s.item_name}
             onClick={() => addGrocery.mutate({ name: s.item_name })}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium transition-all active:scale-95 border border-emerald-100/50"
+            className="flex-none inline-flex items-center gap-1.5 px-[13px] py-[7px] rounded-full text-[13px] font-medium bg-clay-tint text-clay-deep border border-clay-line whitespace-nowrap transition-all active:scale-95"
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus size={13} />
             {capitalizeFirst(s.item_name)}
           </button>
         ))}
