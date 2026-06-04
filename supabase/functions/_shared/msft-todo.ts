@@ -208,6 +208,7 @@ export interface MsftTask {
   id: string
   title: string
   status: string
+  completedDateTime?: { dateTime: string; timeZone: string } | null
 }
 
 async function graphFetch(url: string, accessToken: string, label: string): Promise<Response> {
@@ -241,6 +242,42 @@ export async function fetchOpenTasks(accessToken: string, listId: string): Promi
   const res = await graphFetch(url, accessToken, "/me/todo/lists/{id}/tasks")
   const json = await res.json() as { value: MsftTask[] }
   return json.value ?? []
+}
+
+// Fetches every completed task in the list, following @odata.nextLink to
+// page through the full history. Page size is capped server-side; the page
+// limit is a safety backstop against a runaway loop.
+const MAX_HISTORY_PAGES = 50
+
+export async function fetchCompletedTasks(accessToken: string, listId: string): Promise<MsftTask[]> {
+  // Fetch the list unfiltered (the bare /tasks URI is the one the To Do
+  // endpoint definitely accepts) and keep the completed ones in code. A
+  // $filter on status can return RequestBroker--ParseUri on this endpoint,
+  // so we avoid it entirely. completedDateTime is returned by default; the
+  // full list pages via @odata.nextLink.
+  let url: string | null = `${MSFT_GRAPH}/me/todo/lists/${encodeURIComponent(listId)}/tasks`
+
+  const tasks: MsftTask[] = []
+  let pages = 0
+  while (url && pages < MAX_HISTORY_PAGES) {
+    const res = await graphFetch(url, accessToken, "/me/todo/lists/{id}/tasks (history)")
+    const json = await res.json() as { value?: MsftTask[]; "@odata.nextLink"?: string }
+    if (json.value) tasks.push(...json.value)
+    url = json["@odata.nextLink"] ?? null
+    pages++
+  }
+  return tasks.filter(t => t.status === "completed")
+}
+
+// To Do returns completedDateTime as { dateTime, timeZone }. timeZone is
+// normally "UTC" and dateTime carries no offset, so append "Z" in that case.
+// Falls back to now() if missing or unparseable.
+function completedToIso(task: MsftTask): string {
+  const c = task.completedDateTime
+  if (!c?.dateTime) return new Date().toISOString()
+  const raw = c.timeZone === "UTC" ? `${c.dateTime}Z` : c.dateTime
+  const ms = Date.parse(raw)
+  return Number.isNaN(ms) ? new Date().toISOString() : new Date(ms).toISOString()
 }
 
 // ============================================================
@@ -376,4 +413,153 @@ export async function syncOneConnection(
     .eq("id", connection.id)
 
   return { added, alreadyTracked }
+}
+
+// ============================================================
+// History import — completed tasks → purchase_history
+// ============================================================
+
+export interface HistoryImportResult {
+  imported: number
+  alreadyImported: number
+  error?: string
+}
+
+const HISTORY_CHUNK = 400
+const LINK_PAGE = 1000
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+// Pulls every completed task from the selected list and records one
+// purchase_history row per completion. Idempotent: tasks already marked
+// with history_imported_at in msft_todo_task_links are skipped.
+export async function importHistoryForConnection(
+  supabase: ReturnType<typeof serviceClient>,
+  rawConnection: MsftTodoConnectionRow,
+): Promise<HistoryImportResult> {
+  if (!rawConnection.list_id) {
+    return { imported: 0, alreadyImported: 0, error: "Ingen lista vald" }
+  }
+
+  let connection: MsftTodoConnectionRow
+  try {
+    connection = await ensureFreshAccessToken(supabase, rawConnection)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await supabase
+      .from("household_msft_todo_connections")
+      .update({ last_sync_error: "Anslutningen behöver återskapas" })
+      .eq("id", rawConnection.id)
+    return { imported: 0, alreadyImported: 0, error: message }
+  }
+
+  let tasks: MsftTask[]
+  try {
+    tasks = await fetchCompletedTasks(connection.access_token, connection.list_id!)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await supabase
+      .from("household_msft_todo_connections")
+      .update({ last_sync_error: `Kunde inte hämta historik (${message})` })
+      .eq("id", connection.id)
+    return { imported: 0, alreadyImported: 0, error: message }
+  }
+
+  // Dedupe by task id, drop empties.
+  const byId = new Map<string, MsftTask>()
+  for (const task of tasks) {
+    if (task.id && task.title?.trim()) byId.set(task.id, task)
+  }
+  const unique = Array.from(byId.values())
+  if (unique.length === 0) {
+    await supabase
+      .from("household_msft_todo_connections")
+      .update({ last_synced_at: new Date().toISOString(), last_sync_error: null })
+      .eq("id", connection.id)
+    return { imported: 0, alreadyImported: 0 }
+  }
+
+  // Which of these tasks have we already turned into history? Read this
+  // household's already-imported links directly and page through them —
+  // To Do task ids are long, so filtering by .in(ids) would build a URL
+  // big enough for PostgREST to reject as a Bad Request.
+  const alreadyImportedIds = new Set<string>()
+  for (let from = 0; ; from += LINK_PAGE) {
+    const { data, error } = await supabase
+      .from("msft_todo_task_links")
+      .select("msft_task_id")
+      .eq("household_id", connection.household_id)
+      .not("history_imported_at", "is", null)
+      .range(from, from + LINK_PAGE - 1)
+    if (error) {
+      await supabase
+        .from("household_msft_todo_connections")
+        .update({ last_sync_error: `Länkfel: ${error.message}` })
+        .eq("id", connection.id)
+      return { imported: 0, alreadyImported: 0, error: error.message }
+    }
+    const rows = (data ?? []) as Array<{ msft_task_id: string }>
+    for (const row of rows) alreadyImportedIds.add(row.msft_task_id)
+    if (rows.length < LINK_PAGE) break
+  }
+
+  const toImport = unique.filter(t => !alreadyImportedIds.has(t.id))
+  const alreadyImported = unique.length - toImport.length
+  if (toImport.length === 0) {
+    await supabase
+      .from("household_msft_todo_connections")
+      .update({ last_synced_at: new Date().toISOString(), last_sync_error: null })
+      .eq("id", connection.id)
+    return { imported: 0, alreadyImported }
+  }
+
+  const now = new Date().toISOString()
+  let imported = 0
+
+  for (const batch of chunk(toImport, HISTORY_CHUNK)) {
+    const historyRows = batch.map(task => ({
+      household_id: connection.household_id,
+      item_name: task.title.toLowerCase().trim(),
+      category: null,
+      purchased_by: connection.connected_by,
+      purchased_at: completedToIso(task),
+    }))
+    const { error: histErr } = await supabase.from("purchase_history").insert(historyRows)
+    if (histErr) {
+      await supabase
+        .from("household_msft_todo_connections")
+        .update({ last_sync_error: `Kunde inte spara historik: ${histErr.message}` })
+        .eq("id", connection.id)
+      return { imported, alreadyImported, error: histErr.message }
+    }
+
+    const linkRows = batch.map(task => ({
+      household_id: connection.household_id,
+      msft_task_id: task.id,
+      history_imported_at: now,
+    }))
+    const { error: linkErr } = await supabase
+      .from("msft_todo_task_links")
+      .upsert(linkRows, { onConflict: "household_id,msft_task_id" })
+    if (linkErr) {
+      await supabase
+        .from("household_msft_todo_connections")
+        .update({ last_sync_error: `Länkfel: ${linkErr.message}` })
+        .eq("id", connection.id)
+      return { imported, alreadyImported, error: linkErr.message }
+    }
+
+    imported += batch.length
+  }
+
+  await supabase
+    .from("household_msft_todo_connections")
+    .update({ last_synced_at: now, last_sync_error: null })
+    .eq("id", connection.id)
+
+  return { imported, alreadyImported }
 }

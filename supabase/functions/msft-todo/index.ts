@@ -9,6 +9,7 @@ import {
   ensureFreshAccessToken,
   errorResponse,
   fetchLists,
+  importHistoryForConnection,
   jsonResponse,
   serviceClient,
   syncOneConnection,
@@ -78,6 +79,12 @@ serve(async (req: Request) => {
 
     if (action === "sync") {
       const result = await syncOneConnection(admin, connection)
+      if (result.error) return jsonResponse(result, { status: 502 })
+      return jsonResponse(result)
+    }
+
+    if (action === "import-history") {
+      const result = await importHistoryForConnection(admin, connection)
       if (result.error) return jsonResponse(result, { status: 502 })
       return jsonResponse(result)
     }

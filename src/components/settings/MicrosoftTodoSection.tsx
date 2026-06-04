@@ -4,6 +4,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Link } from '@/lib/icons'
 import {
   useDisconnectMsftTodo,
+  useImportMsftTodoHistory,
   useMsftTodoConnection,
   useMsftTodoLists,
   useSetMsftTodoList,
@@ -22,6 +23,7 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
   const lists = useMsftTodoLists(!!connection && !connection.list_id)
   const setList = useSetMsftTodoList()
   const sync = useSyncMsftTodo()
+  const importHistory = useImportMsftTodoHistory()
   const disconnect = useDisconnectMsftTodo()
 
   const [pendingList, setPendingList] = useState<string>('')
@@ -66,6 +68,26 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
       window.setTimeout(() => setSyncFeedback(null), 4000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synk misslyckades')
+    }
+  }
+
+  async function handleImportHistory() {
+    setError(null)
+    setSyncFeedback(null)
+    try {
+      const result = await importHistory.mutateAsync()
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setSyncFeedback(
+        result.imported === 0
+          ? 'Historiken är redan importerad.'
+          : `${result.imported} köp ${result.imported === 1 ? 'importerat' : 'importerade'} från historiken.`,
+      )
+      window.setTimeout(() => setSyncFeedback(null), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Kunde inte importera historik')
     }
   }
 
@@ -207,6 +229,20 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
                 loading={disconnect.isPending}
               >
                 Koppla loss
+              </Button>
+            </div>
+            <div className="border-t border-hair pt-3 flex flex-col gap-2">
+              <p className="text-xs text-ink-3">
+                Importera dina avklarade uppgifter från To Do som köphistorik. Det förbättrar
+                förslagen på vad ni brukar köpa.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleImportHistory}
+                loading={importHistory.isPending}
+              >
+                Importera historik
               </Button>
             </div>
           </>

@@ -438,6 +438,7 @@ export interface Database {
           msft_task_id: string
           grocery_item_id: string | null
           last_seen_at: string
+          history_imported_at: string | null
           created_at: string
         }
         Insert: {
@@ -446,6 +447,7 @@ export interface Database {
           msft_task_id: string
           grocery_item_id?: string | null
           last_seen_at?: string
+          history_imported_at?: string | null
           created_at?: string
         }
         Update: {
@@ -454,6 +456,7 @@ export interface Database {
           msft_task_id?: string
           grocery_item_id?: string | null
           last_seen_at?: string
+          history_imported_at?: string | null
           created_at?: string
         }
       }

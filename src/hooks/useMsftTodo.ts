@@ -97,6 +97,48 @@ export function useSyncMsftTodo() {
   })
 }
 
+// supabase.functions.invoke throws a generic "non-2xx status code" error.
+// The function returns the real reason in the JSON body, so dig it out.
+async function extractFunctionError(error: unknown): Promise<string> {
+  const ctx = (error as { context?: Response } | null)?.context
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      const body = await ctx.clone().json()
+      if (body?.error) return String(body.error)
+    } catch {
+      /* fall through */
+    }
+  }
+  return error instanceof Error ? error.message : 'Importen misslyckades'
+}
+
+export interface HistoryImportResult {
+  imported: number
+  alreadyImported: number
+  error?: string
+}
+
+export function useImportMsftTodoHistory() {
+  const queryClient = useQueryClient()
+  const { householdId } = useAuth()
+  return useMutation({
+    mutationFn: async (): Promise<HistoryImportResult> => {
+      const { data, error } = await supabase.functions.invoke<HistoryImportResult>('msft-todo', {
+        body: { action: 'import-history' },
+      })
+      if (error) throw new Error(await extractFunctionError(error))
+      if (!data) throw new Error('Tomt svar från msft-todo')
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-history', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['suggestions', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['frequently-bought', householdId] })
+      queryClient.invalidateQueries({ queryKey: ['msft-todo-connection', householdId] })
+    },
+  })
+}
+
 export function useDisconnectMsftTodo() {
   const queryClient = useQueryClient()
   const { householdId } = useAuth()
