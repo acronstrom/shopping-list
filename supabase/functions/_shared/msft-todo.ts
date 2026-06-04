@@ -210,19 +210,27 @@ export interface MsftTask {
   status: string
 }
 
-export async function fetchMe(accessToken: string): Promise<{ mail: string | null; userPrincipalName: string | null }> {
-  const res = await fetch(`${MSFT_GRAPH}/me?$select=mail,userPrincipalName`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+async function graphFetch(url: string, accessToken: string, label: string): Promise<Response> {
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
   })
-  if (!res.ok) throw new Error(`/me failed: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`${label} failed: ${res.status} ${body.slice(0, 500)}`)
+  }
+  return res
+}
+
+export async function fetchMe(accessToken: string): Promise<{ mail: string | null; userPrincipalName: string | null }> {
+  const res = await graphFetch(`${MSFT_GRAPH}/me`, accessToken, "/me")
   return res.json() as Promise<{ mail: string | null; userPrincipalName: string | null }>
 }
 
 export async function fetchLists(accessToken: string): Promise<Array<{ id: string; displayName: string }>> {
-  const res = await fetch(`${MSFT_GRAPH}/me/todo/lists?$select=id,displayName&$top=200`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-  if (!res.ok) throw new Error(`/me/todo/lists failed: ${res.status}`)
+  const res = await graphFetch(`${MSFT_GRAPH}/me/todo/lists`, accessToken, "/me/todo/lists")
   const json = await res.json() as { value: Array<{ id: string; displayName: string }> }
   return json.value ?? []
 }
@@ -230,9 +238,7 @@ export async function fetchLists(accessToken: string): Promise<Array<{ id: strin
 export async function fetchOpenTasks(accessToken: string, listId: string): Promise<MsftTask[]> {
   const url = `${MSFT_GRAPH}/me/todo/lists/${encodeURIComponent(listId)}/tasks`
     + `?$filter=${encodeURIComponent("status ne 'completed'")}`
-    + `&$select=id,title,status&$top=200`
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
-  if (!res.ok) throw new Error(`/me/todo/lists/{id}/tasks failed: ${res.status}`)
+  const res = await graphFetch(url, accessToken, "/me/todo/lists/{id}/tasks")
   const json = await res.json() as { value: MsftTask[] }
   return json.value ?? []
 }

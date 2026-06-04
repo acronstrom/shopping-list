@@ -1,9 +1,11 @@
 import { Outlet } from 'react-router-dom'
 import { useRealtime } from '@/hooks/useRealtime'
+import { useAutoSyncMsftTodo } from '@/hooks/useAutoSyncMsftTodo'
 import { TabBar } from './TabBar'
 
 export function AppShell() {
   useRealtime()
+  useAutoSyncMsftTodo()
   return (
     <div className="min-h-dvh bg-paper">
       <div className="mx-auto max-w-2xl pb-28">
