@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { PageHeader, HeaderIconButton } from '@/components/layout/PageHeader'
 import { StoreCard } from '@/components/stores/StoreCard'
+import { OffersYouBuyOften } from '@/components/stores/OffersYouBuyOften'
 import { useStores, useAddStore } from '@/hooks/useStores'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
@@ -49,7 +50,10 @@ export function StoresPage() {
             action={{ label: 'Lägg till din första butik', onClick: () => setOpen(true) }}
           />
         ) : (
-          stores.map(store => <StoreCard key={store.id} store={store} />)
+          <>
+            <OffersYouBuyOften />
+            {stores.map(store => <StoreCard key={store.id} store={store} />)}
+          </>
         )}
       </div>
 

@@ -36,3 +36,22 @@ export interface Suggestion {
   category: string | null
   count: number
 }
+
+// Returned by the match-offers edge function: a store offer that semantically
+// matches one of the household's frequently-bought items.
+export interface MatchedOffer {
+  id: string
+  store_id: string
+  name: string
+  brand: string | null
+  price: string | null
+  unit: string | null
+  comparison_price: string | null
+  valid_period: string | null
+  valid_to: string | null
+  category: string | null
+  storeName: string
+  matchedName: string
+  count: number
+  score: number
+}

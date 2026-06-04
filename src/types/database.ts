@@ -126,6 +126,26 @@ export interface Database {
           scraped_at?: string
         }
       }
+      name_embeddings: {
+        Row: {
+          text_key: string
+          embedding: number[]
+          model: string
+          created_at: string
+        }
+        Insert: {
+          text_key: string
+          embedding: number[]
+          model: string
+          created_at?: string
+        }
+        Update: {
+          text_key?: string
+          embedding?: number[]
+          model?: string
+          created_at?: string
+        }
+      }
       grocery_items: {
         Row: {
           id: string
