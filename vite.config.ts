@@ -10,13 +10,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Inköpslista',
         short_name: 'Inköpslista',
         description: 'Delad inköpslista för hushållet med AI-kategorisering',
-        theme_color: '#16a34a',
-        background_color: '#ffffff',
+        theme_color: '#c06534',
+        background_color: '#fcf9f5',
         display: 'standalone',
         scope: '/',
         start_url: '/',
