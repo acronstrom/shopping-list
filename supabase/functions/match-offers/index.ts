@@ -15,6 +15,10 @@ const corsHeaders = {
 
 const EMBED_MODEL = "text-embedding-3-small"
 const THRESHOLD = Number(Deno.env.get("OFFER_MATCH_THRESHOLD") ?? "0.55")
+// When a user dismisses a pairing, also drop offers whose name is this close
+// to the dismissed one (for the same frequent item). Higher than THRESHOLD so
+// "similar" means genuinely similar, not just loosely related.
+const DISMISS_SIMILARITY = Number(Deno.env.get("OFFER_DISMISS_SIMILARITY") ?? "0.82")
 const MAX_MATCHES = 30
 const MIN_COUNT = 2
 const MAX_FREQUENTS = 40
@@ -87,6 +91,25 @@ function substringMatch(offerNorm: string, freqNorm: string): boolean {
   return offerNorm.includes(freqNorm) || freqNorm.includes(offerNorm)
 }
 
+// True if `offerNorm` matches one of the dismissed offer names — exactly, or
+// (when vectors exist) within DISMISS_SIMILARITY cosine of it.
+function isDismissed(
+  dismissedNorms: string[],
+  offerNorm: string,
+  offerVec: { vec: number[]; norm: number } | undefined,
+  vectors: Map<string, { vec: number[]; norm: number }>,
+): boolean {
+  for (const dism of dismissedNorms) {
+    if (dism === offerNorm) return true
+    const dismVec = vectors.get(dism)
+    if (offerVec && dismVec &&
+        cosine(offerVec.vec, offerVec.norm, dismVec.vec, dismVec.norm) >= DISMISS_SIMILARITY) {
+      return true
+    }
+  }
+  return false
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
   if (req.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 })
@@ -154,10 +177,28 @@ serve(async (req: Request) => {
 
     const offerNorms = offers.map(o => ({ offer: o, normName: normalizeName(o.name) }))
 
-    // Embed every distinct normalized name, reusing the cache for hits.
+    // Dismissed pairings: frequent (lowercased) → normalized offer names the
+    // household marked as "inte relevant". We suppress these offers — and ones
+    // embedding-close to them — for that frequent item only.
+    const { data: fb } = await admin
+      .from("offer_match_feedback")
+      .select("frequent_name, offer_name")
+      .eq("household_id", householdId)
+    const dismissedByFrequent = new Map<string, string[]>()
+    for (const row of (fb ?? []) as Array<{ frequent_name: string; offer_name: string }>) {
+      const offerNorm = normalizeName(row.offer_name)
+      if (!offerNorm) continue
+      const list = dismissedByFrequent.get(row.frequent_name) ?? []
+      if (!list.includes(offerNorm)) list.push(offerNorm)
+      dismissedByFrequent.set(row.frequent_name, list)
+    }
+
+    // Embed every distinct normalized name, reusing the cache for hits. Include
+    // dismissed offer names so we have vectors to measure similarity against.
     const distinct = new Set<string>()
     for (const f of frequents) distinct.add(f.normName)
     for (const o of offerNorms) if (o.normName) distinct.add(o.normName)
+    for (const names of dismissedByFrequent.values()) for (const n of names) distinct.add(n)
     const allKeys = Array.from(distinct)
 
     const vectors = new Map<string, { vec: number[]; norm: number }>()
@@ -218,6 +259,10 @@ serve(async (req: Request) => {
           : 0
         const qualifies = score >= THRESHOLD || substringMatch(normName, f.normName)
         if (!qualifies) continue
+        // Drop the pairing if the user dismissed this offer for this frequent —
+        // exact name, or an embedding-close variant. Other frequents still match.
+        const dismissed = dismissedByFrequent.get(f.name)
+        if (dismissed && isDismissed(dismissed, normName, offerVec, vectors)) continue
         if (!best || f.count > best.count || (f.count === best.count && score > best.score)) {
           best = { offer, matchedName: f.name, count: f.count, score }
         }

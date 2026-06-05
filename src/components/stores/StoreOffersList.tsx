@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStoreOffers, useRefreshOffers } from '@/hooks/useStoreOffers'
 import { useGroceries } from '@/hooks/useGroceries'
 import { useFrequentlyBoughtNames, type FrequentItem } from '@/hooks/usePurchaseHistory'
+import { useOfferFeedback, useDismissOfferMatch } from '@/hooks/useOfferFeedback'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Spark, ChevronDown } from '@/lib/icons'
@@ -51,6 +52,8 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
   const { data: offers = [], isLoading } = useStoreOffers(storeId)
   const { data: groceries = [] } = useGroceries()
   const { data: frequents = [] } = useFrequentlyBoughtNames()
+  const { data: feedback = [] } = useOfferFeedback()
+  const dismissMatch = useDismissOfferMatch()
   const refresh = useRefreshOffers()
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -65,14 +68,24 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
     return map
   }, [groceries])
 
+  // Pairings the household marked as "inte relevant". Keyed
+  // frequentLower|normalizedOfferName so a dismissed offer stays hidden when
+  // it re-scrapes under the same name.
+  const dismissedPairs = useMemo(() => {
+    const set = new Set<string>()
+    for (const f of feedback) set.add(`${f.frequent_name}|${normalizeName(f.offer_name)}`)
+    return set
+  }, [feedback])
+
   const frequentMatches = useMemo(() => {
     if (frequents.length === 0 || offers.length === 0) return []
     const matched = offers
       .map(offer => ({ offer, match: matchFrequentBuy(offer, frequents) }))
       .filter((row): row is { offer: StoreOffer; match: FrequentItem } => row.match !== null)
+      .filter(({ offer, match }) => !dismissedPairs.has(`${match.name}|${normalizeName(offer.name)}`))
     matched.sort((a, b) => b.match.count - a.match.count)
     return matched.slice(0, 12)
-  }, [offers, frequents])
+  }, [offers, frequents, dismissedPairs])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -158,6 +171,8 @@ export function StoreOffersList({ storeId, storeName, hasUrl, scrapedAt }: Props
                     storeName={storeName}
                     existingGroceryId={existingIdsByName.get(normalizeName(offer.name)) ?? null}
                     frequencyBadge={`Köpt ${match.count}×`}
+                    matchedName={match.name}
+                    onDismiss={() => dismissMatch.mutate({ frequent_name: match.name, offer_name: offer.name })}
                   />
                 ))}
               </ul>

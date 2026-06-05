@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useAddGrocery, useDeleteGrocery } from '@/hooks/useGroceries'
-import { Check, Plus } from '@/lib/icons'
+import { Check, Plus, X } from '@/lib/icons'
 import { clsx } from 'clsx'
 
 // The offer fields a row renders. Both StoreOffer and MatchedOffer satisfy
@@ -28,14 +29,22 @@ export function OfferRow({
   storeName,
   existingGroceryId,
   frequencyBadge,
+  matchedName,
+  onDismiss,
 }: {
   offer: OfferDisplay
   storeName: string
   existingGroceryId: string | null
   frequencyBadge?: string
+  // When this row is a suggestion (matched to something bought often),
+  // `matchedName` is the frequent item that produced it and `onDismiss`
+  // lets the user mark the pairing as irrelevant.
+  matchedName?: string
+  onDismiss?: () => void
 }) {
   const addGrocery = useAddGrocery()
   const deleteGrocery = useDeleteGrocery()
+  const [confirmDismiss, setConfirmDismiss] = useState(false)
   const validToLabel = formatValidTo(offer.valid_to)
   const alreadyInList = existingGroceryId !== null
   const pending = addGrocery.isPending || deleteGrocery.isPending
@@ -63,6 +72,14 @@ export function OfferRow({
     } catch (err) {
       console.error('[OfferRow] remove failed', err)
     }
+  }
+
+  const canDismiss = !!matchedName && !!onDismiss
+
+  function handleConfirmDismiss(e: React.MouseEvent) {
+    e.stopPropagation()
+    setConfirmDismiss(false)
+    onDismiss?.()
   }
 
   return (
@@ -95,20 +112,54 @@ export function OfferRow({
             {offer.price}
           </span>
         )}
-        <button
-          type="button"
-          onClick={alreadyInList ? handleRemove : handleAdd}
-          disabled={pending}
-          aria-label={alreadyInList ? `Ta bort ${offer.name} från listan` : `Lägg till ${offer.name} i listan`}
-          className={clsx(
-            'inline-flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-95 disabled:opacity-50',
-            alreadyInList
-              ? 'bg-clay text-white hover:bg-clay-deep'
-              : 'bg-surface-2 text-ink-3 hover:bg-clay-tint hover:text-clay-deep'
-          )}
-        >
-          {alreadyInList ? <Check size={16} /> : <Plus size={16} sw={2.5} />}
-        </button>
+        {canDismiss && confirmDismiss ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-ink-3 whitespace-nowrap">Dölj?</span>
+            <button
+              type="button"
+              onClick={handleConfirmDismiss}
+              aria-label={`Dölj förslaget ${offer.name}`}
+              className="px-2.5 py-1.5 text-xs font-medium rounded-full bg-rose-tint text-rose hover:opacity-90 active:opacity-80 transition-all whitespace-nowrap"
+            >
+              Ja, dölj
+            </button>
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setConfirmDismiss(false) }}
+              className="px-2.5 py-1.5 text-xs font-medium rounded-full text-ink-2 hover:bg-surface-2 transition-all whitespace-nowrap"
+            >
+              Avbryt
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            {canDismiss && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setConfirmDismiss(true) }}
+                aria-label={`Dölj förslaget ${offer.name}`}
+                title="Inte relevant"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-4 hover:bg-rose-tint hover:text-rose transition-all active:scale-95"
+              >
+                <X size={15} sw={2} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={alreadyInList ? handleRemove : handleAdd}
+              disabled={pending}
+              aria-label={alreadyInList ? `Ta bort ${offer.name} från listan` : `Lägg till ${offer.name} i listan`}
+              className={clsx(
+                'inline-flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-95 disabled:opacity-50',
+                alreadyInList
+                  ? 'bg-clay text-white hover:bg-clay-deep'
+                  : 'bg-surface-2 text-ink-3 hover:bg-clay-tint hover:text-clay-deep'
+              )}
+            >
+              {alreadyInList ? <Check size={16} /> : <Plus size={16} sw={2.5} />}
+            </button>
+          </div>
+        )}
       </div>
     </li>
   )

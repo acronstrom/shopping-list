@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useOfferMatches } from '@/hooks/useOfferMatches'
 import { useGroceries } from '@/hooks/useGroceries'
+import { useOfferFeedback, useDismissOfferMatch } from '@/hooks/useOfferFeedback'
 import { OfferRow } from '@/components/stores/OfferRow'
 import { Spark } from '@/lib/icons'
 import { clsx } from 'clsx'
@@ -12,6 +13,8 @@ function normalizeName(name: string): string {
 export function OffersYouBuyOften() {
   const { data: matches = [], isLoading } = useOfferMatches()
   const { data: groceries = [] } = useGroceries()
+  const { data: feedback = [] } = useOfferFeedback()
+  const dismissMatch = useDismissOfferMatch()
 
   const existingIdsByName = useMemo(() => {
     const map = new Map<string, string>()
@@ -21,6 +24,14 @@ export function OffersYouBuyOften() {
     }
     return map
   }, [groceries])
+
+  // Hide dismissed pairings instantly — the edge result is cached, so we
+  // don't wait for the refetch (which also drops semantically similar ones).
+  const dismissedPairs = useMemo(() => {
+    const set = new Set<string>()
+    for (const f of feedback) set.add(`${f.frequent_name}|${normalizeName(f.offer_name)}`)
+    return set
+  }, [feedback])
 
   // Group offers into a section per store. Within each store, most-bought
   // first, and drop duplicates of the same product (the scraper can list an
@@ -35,6 +46,7 @@ export function OffersYouBuyOften() {
     const seen = new Set<string>()
     const byStore = new Map<string, typeof matches>()
     for (const m of ordered) {
+      if (dismissedPairs.has(`${m.matchedName}|${normalizeName(m.name)}`)) continue
       const key = `${m.store_id}|${normalizeName(m.name)}`
       if (seen.has(key)) continue
       seen.add(key)
@@ -42,7 +54,7 @@ export function OffersYouBuyOften() {
       byStore.get(m.storeName)!.push(m)
     }
     return Array.from(byStore, ([storeName, items]) => ({ storeName, items }))
-  }, [matches])
+  }, [matches, dismissedPairs])
 
   const total = useMemo(() => groups.reduce((n, g) => n + g.items.length, 0), [groups])
 
@@ -71,6 +83,8 @@ export function OffersYouBuyOften() {
                 storeName={m.storeName}
                 existingGroceryId={existingIdsByName.get(normalizeName(m.name)) ?? null}
                 frequencyBadge={`Köpt ${m.count}×`}
+                matchedName={m.matchedName}
+                onDismiss={() => dismissMatch.mutate({ frequent_name: m.matchedName, offer_name: m.name })}
               />
             ))}
           </ul>
