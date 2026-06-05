@@ -27,6 +27,7 @@ function openOffers(url: string | null) {
 export function StoreCard({ store }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [orderExpanded, setOrderExpanded] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [urlInput, setUrlInput] = useState(store.offers_url ?? '')
   const [urlError, setUrlError] = useState('')
   const [seededUrl, setSeededUrl] = useState<string | null>(store.offers_url)
@@ -88,14 +89,24 @@ export function StoreCard({ store }: Props) {
             <span className="hidden sm:inline">Erbjudanden</span>
           </button>
         )}
-        <button
-          onClick={() => deleteStore.mutate(store.id)}
-          disabled={deleteStore.isPending}
-          className="p-2 text-ink-4 hover:text-rose hover:bg-rose-tint rounded-lg transition-colors disabled:opacity-50 flex-none"
-          aria-label="Ta bort butik"
-        >
-          <Trash size={16} />
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-1.5 flex-none">
+            <Button type="button" variant="danger" size="sm" onClick={() => deleteStore.mutate(store.id)} loading={deleteStore.isPending}>
+              Ta bort
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+              Avbryt
+            </Button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="p-2 text-ink-4 hover:text-rose hover:bg-rose-tint rounded-lg transition-colors flex-none"
+            aria-label="Ta bort butik"
+          >
+            <Trash size={16} />
+          </button>
+        )}
       </div>
 
       {expanded && (
