@@ -60,11 +60,14 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
         setError(result.error)
         return
       }
-      setSyncFeedback(
-        result.added === 0
-          ? 'Inget nytt att hämta.'
-          : `${result.added} ${result.added === 1 ? 'ny vara' : 'nya varor'} tillagda.`,
-      )
+      const parts: string[] = []
+      if (result.added > 0) {
+        parts.push(`${result.added} ${result.added === 1 ? 'ny vara' : 'nya varor'} tillagda`)
+      }
+      if (result.removed > 0) {
+        parts.push(`${result.removed} ${result.removed === 1 ? 'vara' : 'varor'} borttagna`)
+      }
+      setSyncFeedback(parts.length ? `${parts.join(', ')}.` : 'Inget nytt att hämta.')
       window.setTimeout(() => setSyncFeedback(null), 4000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synk misslyckades')
@@ -203,6 +206,23 @@ export function MicrosoftTodoSection({ flash, onDismissFlash }: Props) {
                 )}
               </p>
             </div>
+            {!connection.can_write && (
+              <div className="text-xs rounded-[12px] bg-clay-tint text-ink-2 px-2.5 py-2 flex flex-col gap-2">
+                <span>
+                  Tvåvägssynk är inte aktiv. Anslut igen för att kryssade varor ska bockas av i
+                  To Do, och avklarade To Do-uppgifter ska tas bort från listan.
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleConnect}
+                  loading={start.isPending}
+                  className="self-start"
+                >
+                  Aktivera tvåvägssynk
+                </Button>
+              </div>
+            )}
             {connection.last_sync_error && (
               <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">
                 {connection.last_sync_error}

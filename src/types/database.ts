@@ -417,6 +417,7 @@ export interface Database {
           list_name: string | null
           last_synced_at: string | null
           last_sync_error: string | null
+          can_write: boolean
           created_at: string
           updated_at: string
         }
@@ -432,6 +433,7 @@ export interface Database {
           list_name?: string | null
           last_synced_at?: string | null
           last_sync_error?: string | null
+          can_write?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -447,6 +449,7 @@ export interface Database {
           list_name?: string | null
           last_synced_at?: string | null
           last_sync_error?: string | null
+          can_write?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -459,6 +462,7 @@ export interface Database {
           grocery_item_id: string | null
           last_seen_at: string
           history_imported_at: string | null
+          app_completed_at: string | null
           created_at: string
         }
         Insert: {
@@ -468,6 +472,7 @@ export interface Database {
           grocery_item_id?: string | null
           last_seen_at?: string
           history_imported_at?: string | null
+          app_completed_at?: string | null
           created_at?: string
         }
         Update: {
@@ -477,6 +482,7 @@ export interface Database {
           grocery_item_id?: string | null
           last_seen_at?: string
           history_imported_at?: string | null
+          app_completed_at?: string | null
           created_at?: string
         }
       }

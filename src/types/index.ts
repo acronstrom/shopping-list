@@ -17,7 +17,7 @@ export type MealPlanEntry = Database['public']['Tables']['meal_plan_entries']['R
 type MsftTodoConnectionRow = Database['public']['Tables']['household_msft_todo_connections']['Row']
 export type MsftTodoConnectionSummary = Pick<
   MsftTodoConnectionRow,
-  'id' | 'connected_email' | 'list_id' | 'list_name' | 'last_synced_at' | 'last_sync_error'
+  'id' | 'connected_email' | 'list_id' | 'list_name' | 'last_synced_at' | 'last_sync_error' | 'can_write'
 >
 
 export interface RecipeWithIngredients extends Recipe {

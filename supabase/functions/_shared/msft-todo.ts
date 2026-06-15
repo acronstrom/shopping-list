@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 export const MSFT_AUTH_BASE = "https://login.microsoftonline.com/common/oauth2/v2.0"
 export const MSFT_GRAPH = "https://graph.microsoft.com/v1.0"
-export const MSFT_SCOPES = "Tasks.Read User.Read offline_access"
+export const MSFT_SCOPES = "Tasks.ReadWrite User.Read offline_access"
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +24,7 @@ export interface MsftTodoConnectionRow {
   list_name: string | null
   last_synced_at: string | null
   last_sync_error: string | null
+  can_write: boolean
 }
 
 export function serviceClient() {
@@ -225,6 +226,54 @@ async function graphFetch(url: string, accessToken: string, label: string): Prom
   return res
 }
 
+// A read that treats 404 as a value rather than an error, so the reverse
+// sync can tell a deleted task (404) from a transient failure (5xx, which
+// still throws). Used to classify links that dropped out of the open set.
+export async function fetchTaskById(
+  accessToken: string,
+  listId: string,
+  taskId: string,
+): Promise<{ status: number; task: MsftTask | null }> {
+  const url = `${MSFT_GRAPH}/me/todo/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+  })
+  if (res.status === 404) {
+    await res.body?.cancel()
+    return { status: 404, task: null }
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`fetchTaskById failed: ${res.status} ${body.slice(0, 500)}`)
+  }
+  return { status: res.status, task: await res.json() as MsftTask }
+}
+
+// Marks a To Do task completed or re-opens it. Surfaces a 403 to the caller
+// via the thrown message so the push path can flip can_write off.
+export async function patchTaskStatus(
+  accessToken: string,
+  listId: string,
+  taskId: string,
+  status: "completed" | "notStarted",
+): Promise<void> {
+  const url = `${MSFT_GRAPH}/me/todo/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`patchTaskStatus failed: ${res.status} ${body.slice(0, 500)}`)
+  }
+  await res.body?.cancel()
+}
+
 export async function fetchMe(accessToken: string): Promise<{ mail: string | null; userPrincipalName: string | null }> {
   const res = await graphFetch(`${MSFT_GRAPH}/me`, accessToken, "/me")
   return res.json() as Promise<{ mail: string | null; userPrincipalName: string | null }>
@@ -287,6 +336,7 @@ function completedToIso(task: MsftTask): string {
 export interface SyncResult {
   added: number
   alreadyTracked: number
+  removed: number
   error?: string
 }
 
@@ -300,7 +350,7 @@ export async function syncOneConnection(
   rawConnection: MsftTodoConnectionRow,
 ): Promise<SyncResult> {
   if (!rawConnection.list_id) {
-    return { added: 0, alreadyTracked: 0, error: "Ingen lista vald" }
+    return { added: 0, alreadyTracked: 0, removed: 0, error: "Ingen lista vald" }
   }
 
   let connection: MsftTodoConnectionRow
@@ -312,8 +362,14 @@ export async function syncOneConnection(
       .from("household_msft_todo_connections")
       .update({ last_sync_error: "Anslutningen behöver återskapas" })
       .eq("id", rawConnection.id)
-    return { added: 0, alreadyTracked: 0, error: message }
+    return { added: 0, alreadyTracked: 0, removed: 0, error: message }
   }
+
+  // Captured once, before the open-tasks fetch. Every still-open task gets
+  // its last_seen_at stamped to exactly this value below, so the reverse
+  // pass can find tasks that dropped out of the open set via last_seen_at
+  // < runStart without a per-iteration timestamp skew.
+  const runStart = new Date().toISOString()
 
   let tasks: MsftTask[]
   try {
@@ -324,11 +380,12 @@ export async function syncOneConnection(
       .from("household_msft_todo_connections")
       .update({ last_sync_error: `Kunde inte hämta uppgifter (${message})` })
       .eq("id", connection.id)
-    return { added: 0, alreadyTracked: 0, error: message }
+    return { added: 0, alreadyTracked: 0, removed: 0, error: message }
   }
 
   let added = 0
   let alreadyTracked = 0
+  let removed = 0
 
   for (const task of tasks) {
     const title = task.title?.trim()
@@ -342,7 +399,7 @@ export async function syncOneConnection(
       .insert({
         household_id: connection.household_id,
         msft_task_id: task.id,
-        last_seen_at: new Date().toISOString(),
+        last_seen_at: runStart,
       })
       .select("id")
       .maybeSingle()
@@ -355,13 +412,9 @@ export async function syncOneConnection(
           .from("household_msft_todo_connections")
           .update({ last_sync_error: `Länkfel: ${insErr.message}` })
           .eq("id", connection.id)
-        return { added, alreadyTracked, error: insErr.message }
+        return { added, alreadyTracked, removed, error: insErr.message }
       }
-      await supabase
-        .from("msft_todo_task_links")
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq("household_id", connection.household_id)
-        .eq("msft_task_id", task.id)
+      await reconcileOpenLink(supabase, connection, task.id, runStart)
       alreadyTracked++
       continue
     }
@@ -385,7 +438,7 @@ export async function syncOneConnection(
         .from("household_msft_todo_connections")
         .update({ last_sync_error: `Kunde inte lägga till "${title}": ${gErr?.message ?? "okänt fel"}` })
         .eq("id", connection.id)
-      return { added, alreadyTracked, error: gErr?.message ?? "insert failed" }
+      return { added, alreadyTracked, removed, error: gErr?.message ?? "insert failed" }
     }
 
     await supabase
@@ -407,12 +460,109 @@ export async function syncOneConnection(
     added++
   }
 
+  // Reverse pass: links whose task dropped out of the open set since this
+  // run started. app_completed_at IS NULL excludes completions the app
+  // pushed (so un-ticking still works); history_imported_at IS NULL excludes
+  // ones already recorded as bought.
+  const { data: candidates } = await supabase
+    .from("msft_todo_task_links")
+    .select("id, msft_task_id, grocery_item_id")
+    .eq("household_id", connection.household_id)
+    .not("grocery_item_id", "is", null)
+    .is("app_completed_at", null)
+    .is("history_imported_at", null)
+    .lt("last_seen_at", runStart)
+
+  for (const link of (candidates ?? []) as Array<{ id: string; msft_task_id: string; grocery_item_id: string }>) {
+    try {
+      const { status, task } = await fetchTaskById(connection.access_token, connection.list_id!, link.msft_task_id)
+      if (status === 404) {
+        // Deleted in To Do → drop from the list, but don't record a purchase.
+        await supabase.from("grocery_items").delete().eq("id", link.grocery_item_id)
+        removed++
+        continue
+      }
+      if (task && task.status === "completed") {
+        // Completed in To Do → record as bought, then drop from the list.
+        const { data: g } = await supabase
+          .from("grocery_items")
+          .select("name, category")
+          .eq("id", link.grocery_item_id)
+          .maybeSingle()
+        if (g) {
+          await supabase.from("purchase_history").insert({
+            household_id: connection.household_id,
+            item_name: g.name.toLowerCase().trim(),
+            category: g.category,
+            purchased_by: connection.connected_by,
+            purchased_at: completedToIso(task),
+          })
+        }
+        await supabase.from("grocery_items").delete().eq("id", link.grocery_item_id)
+        await supabase
+          .from("msft_todo_task_links")
+          .update({ history_imported_at: new Date().toISOString() })
+          .eq("id", link.id)
+        removed++
+      }
+      // else: still open / other status → leave for next run.
+    } catch {
+      // Transient (5xx / network) — skip this candidate, retry next run.
+    }
+  }
+
   await supabase
     .from("household_msft_todo_connections")
     .update({ last_synced_at: new Date().toISOString(), last_sync_error: null })
     .eq("id", connection.id)
 
-  return { added, alreadyTracked }
+  return { added, alreadyTracked, removed }
+}
+
+// An already-tracked task is still open in To Do. Bump last_seen_at, and
+// either (a) re-arm app_completed_at if the task is open again (so a future
+// completion reaches the reverse pass), or (b) self-heal a tick whose
+// tick-time push never landed (item is checked in the app but the task is
+// still open and was never app-completed).
+async function reconcileOpenLink(
+  supabase: ReturnType<typeof serviceClient>,
+  connection: MsftTodoConnectionRow,
+  taskId: string,
+  runStart: string,
+): Promise<void> {
+  const { data: link } = await supabase
+    .from("msft_todo_task_links")
+    .select("grocery_item_id, app_completed_at")
+    .eq("household_id", connection.household_id)
+    .eq("msft_task_id", taskId)
+    .maybeSingle()
+
+  const patch: { last_seen_at: string; app_completed_at?: string | null } = { last_seen_at: runStart }
+
+  if (link?.app_completed_at) {
+    // Task is open again → clear the marker.
+    patch.app_completed_at = null
+  } else if (connection.can_write && link?.grocery_item_id) {
+    const { data: g } = await supabase
+      .from("grocery_items")
+      .select("is_checked")
+      .eq("id", link.grocery_item_id)
+      .maybeSingle()
+    if (g?.is_checked) {
+      try {
+        await patchTaskStatus(connection.access_token, connection.list_id!, taskId, "completed")
+        patch.app_completed_at = runStart
+      } catch {
+        // Best-effort self-heal; retry on the next run.
+      }
+    }
+  }
+
+  await supabase
+    .from("msft_todo_task_links")
+    .update(patch)
+    .eq("household_id", connection.household_id)
+    .eq("msft_task_id", taskId)
 }
 
 // ============================================================

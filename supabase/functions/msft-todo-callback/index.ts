@@ -70,6 +70,7 @@ serve(async (req: Request) => {
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt,
         last_sync_error: null,
+        can_write: true,
       },
       { onConflict: "household_id" },
     )

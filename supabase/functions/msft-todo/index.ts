@@ -11,6 +11,7 @@ import {
   fetchLists,
   importHistoryForConnection,
   jsonResponse,
+  patchTaskStatus,
   serviceClient,
   syncOneConnection,
   type MsftTodoConnectionRow,
@@ -42,7 +43,7 @@ serve(async (req: Request) => {
   if (!membership) return errorResponse("Inget hushåll", 400)
   const householdId = membership.household_id as string
 
-  let body: { action?: string; listId?: string; listName?: string }
+  let body: { action?: string; listId?: string; listName?: string; groceryItemId?: string; isChecked?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -81,6 +82,49 @@ serve(async (req: Request) => {
       const result = await syncOneConnection(admin, connection)
       if (result.error) return jsonResponse(result, { status: 502 })
       return jsonResponse(result)
+    }
+
+    if (action === "task-status") {
+      if (!body.groceryItemId || typeof body.isChecked !== "boolean") {
+        return errorResponse("Saknar groceryItemId/isChecked", 400)
+      }
+      if (!connection.list_id || !connection.can_write) {
+        return jsonResponse({ skipped: true })
+      }
+      const { data: link } = await admin
+        .from("msft_todo_task_links")
+        .select("id, msft_task_id")
+        .eq("household_id", householdId)
+        .eq("grocery_item_id", body.groceryItemId)
+        .maybeSingle()
+      if (!link) return jsonResponse({ skipped: true })
+
+      const fresh = await ensureFreshAccessToken(admin, connection)
+      try {
+        await patchTaskStatus(
+          fresh.access_token,
+          fresh.list_id!,
+          link.msft_task_id,
+          body.isChecked ? "completed" : "notStarted",
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        // A 403 means the token lacks write scope — flag for re-consent so
+        // the UI prompts the user to reconnect, and stop pushing.
+        if (message.includes("403")) {
+          await admin
+            .from("household_msft_todo_connections")
+            .update({ can_write: false })
+            .eq("id", connection.id)
+          return jsonResponse({ skipped: true, reason: "reconnect" })
+        }
+        throw err
+      }
+      await admin
+        .from("msft_todo_task_links")
+        .update({ app_completed_at: body.isChecked ? new Date().toISOString() : null })
+        .eq("id", link.id)
+      return jsonResponse({ ok: true })
     }
 
     if (action === "import-history") {

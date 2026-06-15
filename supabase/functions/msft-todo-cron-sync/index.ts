@@ -31,14 +31,14 @@ serve(async (req: Request) => {
     .not("list_id", "is", null)
   if (error) return errorResponse(error.message, 500)
 
-  const results: Array<{ household_id: string; added: number; alreadyTracked: number; error?: string }> = []
+  const results: Array<{ household_id: string; added: number; alreadyTracked: number; removed: number; error?: string }> = []
   for (const raw of (connections ?? []) as MsftTodoConnectionRow[]) {
     try {
       const r = await syncOneConnection(admin, raw)
       results.push({ household_id: raw.household_id, ...r })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      results.push({ household_id: raw.household_id, added: 0, alreadyTracked: 0, error: message })
+      results.push({ household_id: raw.household_id, added: 0, alreadyTracked: 0, removed: 0, error: message })
     }
   }
 

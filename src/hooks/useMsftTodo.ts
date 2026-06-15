@@ -10,7 +10,7 @@ export function useMsftTodoConnection() {
     queryFn: async (): Promise<MsftTodoConnectionSummary | null> => {
       const { data, error } = await supabase
         .from('household_msft_todo_connections')
-        .select('id, connected_email, list_id, list_name, last_synced_at, last_sync_error')
+        .select('id, connected_email, list_id, list_name, last_synced_at, last_sync_error, can_write')
         .eq('household_id', householdId!)
         .maybeSingle()
       if (error) throw error
@@ -75,6 +75,7 @@ export function useSetMsftTodoList() {
 export interface SyncResult {
   added: number
   alreadyTracked: number
+  removed: number
   error?: string
 }
 

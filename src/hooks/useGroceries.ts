@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { capitalizeFirst } from '@/lib/text'
-import type { GroceryItem } from '@/types'
+import type { GroceryItem, MsftTodoConnectionSummary } from '@/types'
 
 export function useGroceries() {
   const { householdId } = useAuth()
@@ -175,6 +175,18 @@ export function useToggleGrocery() {
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(['groceries', householdId], ctx.prev)
+    },
+    onSuccess: (_data, { id, is_checked }) => {
+      // Two-way sync: push the tick/un-tick to the linked Microsoft To Do
+      // task. Best-effort — the edge function no-ops if the item isn't
+      // linked, and the next sync self-heals a dropped push.
+      const connection = queryClient.getQueryData<MsftTodoConnectionSummary | null>(
+        ['msft-todo-connection', householdId],
+      )
+      if (!connection?.list_id || !connection.can_write) return
+      supabase.functions.invoke('msft-todo', {
+        body: { action: 'task-status', groceryItemId: id, isChecked: is_checked },
+      }).catch(() => { /* swallow — next sync reconciles */ })
     },
   })
 }
