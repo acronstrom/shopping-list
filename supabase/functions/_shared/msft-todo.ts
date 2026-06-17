@@ -2,6 +2,7 @@
 // Used by msft-todo (sync action), msft-todo-cron-sync, and msft-todo-callback.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { categorizeNames, loadHouseholdCategories } from "./categorize.ts"
 
 export const MSFT_AUTH_BASE = "https://login.microsoftonline.com/common/oauth2/v2.0"
 export const MSFT_GRAPH = "https://graph.microsoft.com/v1.0"
@@ -387,6 +388,12 @@ export async function syncOneConnection(
   let alreadyTracked = 0
   let removed = 0
 
+  // Newly inserted items, categorized in one batch after the loop. We can't
+  // reuse the categorize-item edge function here: it resolves the household
+  // from the caller's user token, and this sync runs with a service-role
+  // client that has no user attached.
+  const newItems: { id: string; name: string }[] = []
+
   for (const task of tasks) {
     const title = task.title?.trim()
     if (!title) continue
@@ -446,18 +453,27 @@ export async function syncOneConnection(
       .update({ grocery_item_id: grocery.id })
       .eq("id", linkInsert!.id)
 
-    // Fire-and-forget categorization. Same pattern as useGroceries.
-    supabase.functions
-      .invoke("categorize-item", { body: { itemName: grocery.name } })
-      .then(({ data: catData }) => {
-        const category = (catData as { category?: string } | null)?.category
-        if (category && category !== "Övrigt") {
-          supabase.from("grocery_items").update({ category }).eq("id", grocery.id)
-        }
-      })
-      .catch(() => { /* swallow — categorization is best-effort */ })
-
+    newItems.push({ id: grocery.id, name: grocery.name })
     added++
+  }
+
+  // Categorize the new items in one batch. Awaited (not fire-and-forget) so the
+  // updates land before the isolate is frozen; best-effort, so any failure just
+  // leaves the affected items as "Övrigt".
+  if (newItems.length > 0) {
+    const categories = await loadHouseholdCategories(supabase, connection.household_id)
+    const openaiKey = Deno.env.get("OPENAI_API_KEY")
+    const categoriesByName = await categorizeNames(
+      newItems.map(i => i.name),
+      categories,
+      openaiKey,
+    )
+    await Promise.all(
+      newItems
+        .map(item => ({ id: item.id, category: categoriesByName[item.name] }))
+        .filter(u => u.category && u.category !== "Övrigt")
+        .map(u => supabase.from("grocery_items").update({ category: u.category }).eq("id", u.id)),
+    )
   }
 
   // Reverse pass: links whose task dropped out of the open set since this

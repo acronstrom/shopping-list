@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { categorizeName, categorizeNames, loadHouseholdCategories } from "../_shared/categorize.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,9 +34,21 @@ serve(async (req: Request) => {
     })
   }
 
-  const { itemName } = await req.json()
-  if (!itemName) {
+  const body = await req.json()
+  const itemName: unknown = body?.itemName
+  const itemNamesRaw: unknown = body?.itemNames
+  const batch = Array.isArray(itemNamesRaw)
+  const itemNames = batch
+    ? itemNamesRaw.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    : []
+
+  if (!batch && !itemName) {
     return new Response(JSON.stringify({ category: "Övrigt" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+  if (batch && itemNames.length === 0) {
+    return new Response(JSON.stringify({ categories: {} }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
@@ -48,95 +61,25 @@ serve(async (req: Request) => {
     .eq("status", "accepted")
     .limit(1)
   if (memberErr || !memberRows?.[0]?.household_id) {
-    return new Response(JSON.stringify({ category: "Övrigt" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    return new Response(
+      JSON.stringify(batch ? { categories: {} } : { category: "Övrigt" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
   }
 
   const householdId = memberRows[0].household_id as string
-
-  const { data: categoryRows } = await supabase
-    .from("household_categories")
-    .select("name, sort_order")
-    .eq("household_id", householdId)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-
-  const categories = (categoryRows ?? [])
-    .map(r => (r as { name?: string }).name)
-    .filter((v): v is string => !!v && typeof v === "string")
-
-  if (!categories.includes("Övrigt")) categories.push("Övrigt")
-
+  const categories = await loadHouseholdCategories(supabase, householdId)
   const openaiKey = Deno.env.get("OPENAI_API_KEY")
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ category: "Övrigt" }), {
+
+  if (batch) {
+    const categoriesByName = await categorizeNames(itemNames, categories, openaiKey)
+    return new Response(JSON.stringify({ categories: categoriesByName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `Du kategoriserar matvaror på svenska. Användaren skickar ett varunamn på svenska (t.ex. "mjölk", "tomater", "leverpastej"). Svara med ENDAST en kategori, exakt som den står i listan nedan, utan extra text, citattecken eller förklaring. Om varan inte tydligt passar i någon kategori, svara "Övrigt".\n\nTillåtna kategorier:\n${categories.join(", ")}`,
-          },
-          { role: "user", content: itemName },
-        ],
-        max_tokens: 20,
-        temperature: 0,
-      }),
-    })
-
-    const data = await response.json()
-    const raw = (data.choices?.[0]?.message?.content ?? "").trim()
-    const category = matchCategory(raw, categories)
-
-    console.log("[categorize-item]", JSON.stringify({
-      itemName,
-      categories,
-      raw,
-      matched: category,
-    }))
-
-    return new Response(JSON.stringify({ category }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
-  } catch (err) {
-    console.error("[categorize-item] error", err)
-    return new Response(JSON.stringify({ category: "Övrigt" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
-  }
+  const category = await categorizeName(itemName as string, categories, openaiKey)
+  return new Response(JSON.stringify({ category }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  })
 })
-
-function matchCategory(raw: string, categories: string[]): string {
-  if (!raw) return "Övrigt"
-
-  // Strip surrounding quotes, leading/trailing punctuation, and whitespace.
-  const cleaned = raw
-    .replace(/^[\s"'`*_]+|[\s"'`*_.,;:!?]+$/g, "")
-    .trim()
-
-  // Exact match.
-  if (categories.includes(cleaned)) return cleaned
-
-  // Case-insensitive match.
-  const lower = cleaned.toLocaleLowerCase("sv")
-  const ci = categories.find(c => c.toLocaleLowerCase("sv") === lower)
-  if (ci) return ci
-
-  // Substring match: the model wrapped the category in a sentence.
-  const containing = categories.find(c => cleaned.includes(c))
-  if (containing) return containing
-
-  return "Övrigt"
-}

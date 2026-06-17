@@ -120,7 +120,34 @@ export function useAddGroceriesBulk() {
         .insert(rows)
         .select()
       if (error) throw error
-      return (data ?? []) as GroceryItem[]
+
+      const inserted = (data ?? []) as GroceryItem[]
+
+      // Fire-and-forget categorization for items that arrived without a real
+      // category (recipe page, meal plan). Items that already carry one — e.g.
+      // photo recipe import — are left untouched. One batch call for the lot.
+      const uncategorized = inserted.filter(item => item.category === 'Övrigt')
+      if (uncategorized.length > 0) {
+        supabase.functions
+          .invoke('categorize-item', { body: { itemNames: uncategorized.map(i => i.name) } })
+          .then(({ data: catData }) => {
+            const map = (catData as { categories?: Record<string, string> })?.categories ?? {}
+            const updates = uncategorized
+              .map(item => ({ id: item.id, category: map[item.name] }))
+              .filter(u => u.category && u.category !== 'Övrigt')
+            if (updates.length === 0) return
+            Promise.all(
+              updates.map(u =>
+                supabase.from('grocery_items').update({ category: u.category }).eq('id', u.id),
+              ),
+            ).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['groceries', householdId] })
+            })
+          })
+          .catch(() => { /* swallow — categorization is best-effort */ })
+      }
+
+      return inserted
     },
     onMutate: async (items) => {
       await queryClient.cancelQueries({ queryKey: ['groceries', householdId] })
