@@ -62,32 +62,35 @@ export function playCompleteSound() {
   unlockAudio()
 
   const t0 = ctx.currentTime
+
+  // Crisp struck-bell "ding": a single clear pitch with inharmonic bell
+  // partials. The sharp (~4ms) attack gives the percussive strike, and the
+  // higher partials decay faster than the fundamental — the signature of a
+  // real bell rather than a pure beep or a pitch-bending swoop.
   const master = ctx.createGain()
-  master.gain.setValueAtTime(0.0001, t0)
-  master.gain.exponentialRampToValueAtTime(0.55, t0 + 0.015)
-  master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32)
+  master.gain.setValueAtTime(0.5, t0)
   master.connect(ctx.destination)
 
-  // Bright two-note "ding": E5 -> A5
-  const o1 = ctx.createOscillator()
-  o1.type = 'sine'
-  o1.frequency.setValueAtTime(659.25, t0)
-  o1.frequency.exponentialRampToValueAtTime(880, t0 + 0.09)
-  o1.connect(master)
-  o1.start(t0)
-  o1.stop(t0 + 0.34)
-
-  // Soft harmonic for a richer tone
-  const o2 = ctx.createOscillator()
-  o2.type = 'triangle'
-  o2.frequency.setValueAtTime(1318.5, t0)
-  const harmonicGain = ctx.createGain()
-  harmonicGain.gain.setValueAtTime(0.0001, t0)
-  harmonicGain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02)
-  harmonicGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22)
-  o2.connect(harmonicGain).connect(ctx.destination)
-  o2.start(t0)
-  o2.stop(t0 + 0.24)
+  const fundamental = 880 // A5
+  // [frequency ratio, peak gain, decay seconds]
+  const partials: Array<[number, number, number]> = [
+    [1, 1.0, 0.6],
+    [2, 0.55, 0.42],
+    [2.76, 0.3, 0.28],
+    [5.4, 0.12, 0.16],
+  ]
+  for (const [ratio, peak, decay] of partials) {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(fundamental * ratio, t0)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t0)
+    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.004)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay)
+    osc.connect(g).connect(master)
+    osc.start(t0)
+    osc.stop(t0 + decay + 0.02)
+  }
 }
 
 export function playUncheckSound() {
