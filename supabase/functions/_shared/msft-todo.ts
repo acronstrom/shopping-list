@@ -2,7 +2,7 @@
 // Used by msft-todo (sync action), msft-todo-cron-sync, and msft-todo-callback.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { categorizeNames, loadHouseholdCategories } from "./categorize.ts"
+import { categorizeNames, loadCategoryOverrides, loadHouseholdCategories } from "./categorize.ts"
 
 export const MSFT_AUTH_BASE = "https://login.microsoftonline.com/common/oauth2/v2.0"
 export const MSFT_GRAPH = "https://graph.microsoft.com/v1.0"
@@ -461,12 +461,16 @@ export async function syncOneConnection(
   // updates land before the isolate is frozen; best-effort, so any failure just
   // leaves the affected items as "Övrigt".
   if (newItems.length > 0) {
-    const categories = await loadHouseholdCategories(supabase, connection.household_id)
+    const [categories, overrides] = await Promise.all([
+      loadHouseholdCategories(supabase, connection.household_id),
+      loadCategoryOverrides(supabase, connection.household_id),
+    ])
     const openaiKey = Deno.env.get("OPENAI_API_KEY")
     const categoriesByName = await categorizeNames(
       newItems.map(i => i.name),
       categories,
       openaiKey,
+      overrides,
     )
     await Promise.all(
       newItems

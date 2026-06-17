@@ -252,6 +252,32 @@ export interface Database {
           created_at?: string
         }
       }
+      category_overrides: {
+        Row: {
+          id: string
+          household_id: string
+          item_name: string
+          category: string
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          item_name: string
+          category: string
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          item_name?: string
+          category?: string
+          updated_by?: string | null
+          updated_at?: string
+        }
+      }
       recipes: {
         Row: {
           id: string

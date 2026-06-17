@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
-import { useToggleGrocery, useDeleteGrocery } from '@/hooks/useGroceries'
+import { useToggleGrocery, useDeleteGrocery, useSetGroceryCategory } from '@/hooks/useGroceries'
 import { useUI } from '@/contexts/UIContext'
-import { Check, Trash } from '@/lib/icons'
+import { Check, Trash, Tag } from '@/lib/icons'
+import { Dot } from '@/components/ui/Dot'
+import { CategoryPickerModal } from './CategoryPickerModal'
 import { playCompleteSound, playUncheckSound } from '@/lib/feedback'
 import { capitalizeFirst } from '@/lib/text'
 import type { GroceryItem as GroceryItemType } from '@/types'
@@ -29,8 +31,10 @@ const CONFETTI_COLORS = ['#b5673c', '#d08a5a', '#e0a472', '#7e9479', '#cf9f5e']
 export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
   const toggle = useToggleGrocery()
   const deleteItem = useDeleteGrocery()
+  const setCategory = useSetGroceryCategory()
   const { mode } = useUI()
   const [showDate, setShowDate] = useState(false)
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false)
   const [celebrate, setCelebrate] = useState(0)
   const animatingRef = useRef(false)
   const isShopping = mode === 'shopping'
@@ -148,16 +152,43 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           </p>
         )}
         {!isShopping && (
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              setShowDate(v => !v)
-            }}
-            className="text-[11px] text-ink-4 hover:text-ink-3 transition-colors mt-0.5"
-            aria-label="Visa/dölj tidpunkt"
-          >
-            {showDate ? formatAddedAt(item.created_at) : '···'}
-          </button>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                setShowCategoryPicker(true)
+              }}
+              className={clsx(
+                'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] transition-colors',
+                item.category === 'Övrigt'
+                  ? 'border border-dashed border-clay-line text-clay-deep hover:bg-clay-tint/50'
+                  : 'bg-surface-2 text-ink-3 hover:bg-hair'
+              )}
+              aria-label="Ändra kategori"
+            >
+              {item.category === 'Övrigt' ? (
+                <>
+                  <Tag size={11} />
+                  Välj kategori
+                </>
+              ) : (
+                <>
+                  <Dot category={item.category} />
+                  {item.category}
+                </>
+              )}
+            </button>
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                setShowDate(v => !v)
+              }}
+              className="text-[11px] text-ink-4 hover:text-ink-3 transition-colors"
+              aria-label="Visa/dölj tidpunkt"
+            >
+              {showDate ? formatAddedAt(item.created_at) : '···'}
+            </button>
+          </div>
         )}
         {showAisle && aisleNumber !== undefined && (
           <span className="text-[11px] text-ink-4 ml-2">Gång {aisleNumber}</span>
@@ -188,6 +219,14 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
           <Trash size={16} />
         </button>
       )}
+
+      <CategoryPickerModal
+        open={showCategoryPicker}
+        onClose={() => setShowCategoryPicker(false)}
+        itemName={capitalizeFirst(item.name)}
+        currentCategory={item.category}
+        onSelect={category => setCategory.mutate({ id: item.id, name: item.name, category })}
+      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { capitalizeFirst } from '@/lib/text'
+import { capitalizeFirst, normalizeItemName } from '@/lib/text'
 import type { GroceryItem, MsftTodoConnectionSummary } from '@/types'
 
 export function useGroceries() {
@@ -214,6 +214,62 @@ export function useToggleGrocery() {
       supabase.functions.invoke('msft-todo', {
         body: { action: 'task-status', groceryItemId: id, isChecked: is_checked },
       }).catch(() => { /* swallow — next sync reconciles */ })
+    },
+  })
+}
+
+// Manually set an item's category. Applies the choice to every item currently
+// on the list with the same (normalized) name, and remembers it as a learned
+// override so future adds/syncs of that name skip the model and use this
+// category. See supabase/functions/_shared/categorize.ts.
+export function useSetGroceryCategory() {
+  const queryClient = useQueryClient()
+  const { householdId, user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ id, name, category }: { id: string; name: string; category: string }) => {
+      const key = normalizeItemName(name)
+      const current =
+        queryClient.getQueryData<GroceryItem[]>(['groceries', householdId]) ?? []
+      const ids = current
+        .filter(i => i.id === id || normalizeItemName(i.name) === key)
+        .map(i => i.id)
+      const targetIds = ids.length > 0 ? ids : [id]
+
+      const { error: updErr } = await supabase
+        .from('grocery_items')
+        .update({ category })
+        .in('id', targetIds)
+      if (updErr) throw updErr
+
+      // Remember the correction for next time. Best-effort: the visible change
+      // already succeeded, so don't fail the mutation if learning doesn't stick.
+      const { error: ovrErr } = await supabase
+        .from('category_overrides')
+        .upsert(
+          { household_id: householdId!, item_name: key, category, updated_by: user!.id },
+          { onConflict: 'household_id,item_name' },
+        )
+      if (ovrErr) console.error('[useSetGroceryCategory] override upsert failed', ovrErr)
+    },
+    onMutate: async ({ id, name, category }) => {
+      await queryClient.cancelQueries({ queryKey: ['groceries', householdId] })
+      const prev = queryClient.getQueryData<GroceryItem[]>(['groceries', householdId])
+      const key = normalizeItemName(name)
+      queryClient.setQueryData<GroceryItem[]>(['groceries', householdId], old =>
+        old?.map(item =>
+          item.id === id || normalizeItemName(item.name) === key
+            ? { ...item, category }
+            : item,
+        ) ?? [],
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['groceries', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['groceries', householdId] })
     },
   })
 }

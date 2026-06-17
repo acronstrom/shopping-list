@@ -8,3 +8,10 @@ export function capitalizeFirst(value: string): string {
   chars[i] = chars[i].toLocaleUpperCase('sv')
   return chars.join('')
 }
+
+// Canonical key for matching an item by name regardless of casing/whitespace.
+// Used for learned category overrides — must stay in sync with the identically
+// named helper in supabase/functions/_shared/categorize.ts.
+export function normalizeItemName(value: string): string {
+  return value.trim().toLocaleLowerCase('sv')
+}

@@ -30,14 +30,60 @@ export async function loadHouseholdCategories(
   return categories
 }
 
+// Canonical key for matching an item by name. Must stay in sync with
+// normalizeItemName() in src/lib/text.ts so the keys written by the app line up
+// with the keys looked up here.
+export function normalizeItemName(value: string): string {
+  return value.trim().toLocaleLowerCase("sv")
+}
+
+// Load a household's learned category overrides as a map from normalized item
+// name to category. These are explicit user corrections and take priority over
+// the model.
+export async function loadCategoryOverrides(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from("category_overrides")
+    .select("item_name, category")
+    .eq("household_id", householdId)
+
+  const overrides: Record<string, string> = {}
+  for (const row of (data ?? []) as Array<{ item_name?: string; category?: string }>) {
+    if (typeof row.item_name === "string" && typeof row.category === "string") {
+      overrides[row.item_name] = row.category
+    }
+  }
+  return overrides
+}
+
+// Return a learned override for a name, but only if it still points at a valid
+// category (the category could have since been renamed or removed).
+function overrideFor(
+  itemName: string,
+  categories: string[],
+  overrides: Record<string, string> | undefined,
+): string | null {
+  if (!overrides) return null
+  const hit = overrides[normalizeItemName(itemName)]
+  return hit && categories.includes(hit) ? hit : null
+}
+
 // Categorize a single item name. Returns "Övrigt" on any failure (missing key,
 // network error, unparseable response) — categorization is always best-effort.
 export async function categorizeName(
   itemName: string,
   categories: string[],
   openaiKey: string | undefined,
+  overrides?: Record<string, string>,
 ): Promise<string> {
-  if (!itemName || !openaiKey) return "Övrigt"
+  if (!itemName) return "Övrigt"
+
+  const learned = overrideFor(itemName, categories, overrides)
+  if (learned) return learned
+
+  if (!openaiKey) return "Övrigt"
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -79,11 +125,20 @@ export async function categorizeNames(
   itemNames: string[],
   categories: string[],
   openaiKey: string | undefined,
+  overrides?: Record<string, string>,
 ): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
   for (const n of itemNames) result[n] = "Övrigt"
 
-  if (itemNames.length === 0 || !openaiKey) return result
+  // Learned overrides win and never hit the model. Only ask about the rest.
+  const remaining: string[] = []
+  for (const n of itemNames) {
+    const learned = overrideFor(n, categories, overrides)
+    if (learned) result[n] = learned
+    else remaining.push(n)
+  }
+
+  if (remaining.length === 0 || !openaiKey) return result
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -100,9 +155,9 @@ export async function categorizeNames(
             role: "system",
             content: `Du kategoriserar matvaror på svenska. Användaren skickar en JSON-array med varunamn (t.ex. ["mjölk", "tomater", "leverpastej"]). Svara med ENDAST ett JSON-objekt där varje nyckel är ett varunamn exakt som det skrevs och värdet är EN kategori från listan nedan, utan extra text eller förklaring. Om en vara inte tydligt passar i någon kategori, använd "Övrigt".\n\nTillåtna kategorier:\n${categories.join(", ")}`,
           },
-          { role: "user", content: JSON.stringify(itemNames) },
+          { role: "user", content: JSON.stringify(remaining) },
         ],
-        max_tokens: Math.min(2000, 100 + itemNames.length * 25),
+        max_tokens: Math.min(2000, 100 + remaining.length * 25),
         temperature: 0,
       }),
     })
@@ -118,14 +173,14 @@ export async function categorizeNames(
       return result
     }
 
-    for (const name of itemNames) {
+    for (const name of remaining) {
       const value = parsed[name]
       if (typeof value === "string") {
         result[name] = matchCategory(value, categories)
       }
     }
 
-    console.log("[categorize] batch", JSON.stringify({ count: itemNames.length, result }))
+    console.log("[categorize] batch", JSON.stringify({ count: itemNames.length, fromModel: remaining.length, result }))
     return result
   } catch (err) {
     console.error("[categorize] batch error", err)

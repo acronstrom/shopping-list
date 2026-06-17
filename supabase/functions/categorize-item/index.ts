@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { categorizeName, categorizeNames, loadHouseholdCategories } from "../_shared/categorize.ts"
+import { categorizeName, categorizeNames, loadCategoryOverrides, loadHouseholdCategories } from "../_shared/categorize.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,17 +68,20 @@ serve(async (req: Request) => {
   }
 
   const householdId = memberRows[0].household_id as string
-  const categories = await loadHouseholdCategories(supabase, householdId)
+  const [categories, overrides] = await Promise.all([
+    loadHouseholdCategories(supabase, householdId),
+    loadCategoryOverrides(supabase, householdId),
+  ])
   const openaiKey = Deno.env.get("OPENAI_API_KEY")
 
   if (batch) {
-    const categoriesByName = await categorizeNames(itemNames, categories, openaiKey)
+    const categoriesByName = await categorizeNames(itemNames, categories, openaiKey, overrides)
     return new Response(JSON.stringify({ categories: categoriesByName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
 
-  const category = await categorizeName(itemName as string, categories, openaiKey)
+  const category = await categorizeName(itemName as string, categories, openaiKey, overrides)
   return new Response(JSON.stringify({ category }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   })
