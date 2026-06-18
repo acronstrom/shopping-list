@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { InviteMemberForm } from '@/components/household/InviteMemberForm'
 import { HouseholdCategoriesSection } from '@/components/household/HouseholdCategoriesSection'
+import { HouseholdSubcategoriesSection } from '@/components/household/HouseholdSubcategoriesSection'
 import { HouseholdRecipeCategoriesSection } from '@/components/household/HouseholdRecipeCategoriesSection'
 import { MicrosoftTodoSection } from '@/components/settings/MicrosoftTodoSection'
 import { useHouseholdMembers } from '@/hooks/useHousehold'
@@ -46,6 +47,8 @@ export function SettingsPage() {
       <div className="px-[18px] pt-2 flex flex-col gap-6">
 
         <HouseholdCategoriesSection />
+
+        <HouseholdSubcategoriesSection />
 
         <HouseholdRecipeCategoriesSection />
 

@@ -152,6 +152,7 @@ export interface Database {
           household_id: string
           name: string
           category: string
+          subcategory: string | null
           quantity: string | null
           note: string | null
           is_checked: boolean
@@ -165,6 +166,7 @@ export interface Database {
           household_id: string
           name: string
           category?: string
+          subcategory?: string | null
           quantity?: string | null
           note?: string | null
           is_checked?: boolean
@@ -178,6 +180,7 @@ export interface Database {
           household_id?: string
           name?: string
           category?: string
+          subcategory?: string | null
           quantity?: string | null
           note?: string | null
           is_checked?: boolean
@@ -258,6 +261,7 @@ export interface Database {
           household_id: string
           item_name: string
           category: string
+          subcategory: string | null
           updated_by: string | null
           updated_at: string
         }
@@ -266,6 +270,7 @@ export interface Database {
           household_id: string
           item_name: string
           category: string
+          subcategory?: string | null
           updated_by?: string | null
           updated_at?: string
         }
@@ -274,8 +279,35 @@ export interface Database {
           household_id?: string
           item_name?: string
           category?: string
+          subcategory?: string | null
           updated_by?: string | null
           updated_at?: string
+        }
+      }
+      household_subcategories: {
+        Row: {
+          id: string
+          household_id: string
+          parent_category: string
+          name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          household_id: string
+          parent_category: string
+          name: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          household_id?: string
+          parent_category?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
         }
       }
       recipes: {

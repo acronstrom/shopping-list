@@ -48,11 +48,13 @@ export function useAddGrocery() {
       // Fire-and-forget category assignment
       supabase.functions.invoke('categorize-item', { body: { itemName: cleanName } })
         .then(({ data: catData }) => {
-          const category = (catData as { category?: string })?.category
-          if (category && category !== 'Övrigt') {
+          const result = catData as { category?: string; subcategory?: string | null } | null
+          const category = result?.category
+          const subcategory = result?.subcategory ?? null
+          if (category && (category !== 'Övrigt' || subcategory)) {
             supabase
               .from('grocery_items')
-              .update({ category })
+              .update({ category, subcategory })
               .eq('id', tempId)
               .then(() => {
                 queryClient.invalidateQueries({ queryKey: ['groceries', householdId] })
@@ -70,6 +72,7 @@ export function useAddGrocery() {
         household_id: householdId!,
         name: capitalizeFirst(name.trim()),
         category: 'Övrigt',
+        subcategory: null,
         quantity: quantity?.trim() || null,
         note: note?.trim() || null,
         is_checked: false,
@@ -131,14 +134,19 @@ export function useAddGroceriesBulk() {
         supabase.functions
           .invoke('categorize-item', { body: { itemNames: uncategorized.map(i => i.name) } })
           .then(({ data: catData }) => {
-            const map = (catData as { categories?: Record<string, string> })?.categories ?? {}
+            const map =
+              (catData as { categories?: Record<string, { category?: string; subcategory?: string | null }> })
+                ?.categories ?? {}
             const updates = uncategorized
-              .map(item => ({ id: item.id, category: map[item.name] }))
-              .filter(u => u.category && u.category !== 'Övrigt')
+              .map(item => ({ id: item.id, result: map[item.name] }))
+              .filter(u => u.result && (u.result.category !== 'Övrigt' || u.result.subcategory))
             if (updates.length === 0) return
             Promise.all(
               updates.map(u =>
-                supabase.from('grocery_items').update({ category: u.category }).eq('id', u.id),
+                supabase
+                  .from('grocery_items')
+                  .update({ category: u.result!.category, subcategory: u.result!.subcategory ?? null })
+                  .eq('id', u.id),
               ),
             ).then(() => {
               queryClient.invalidateQueries({ queryKey: ['groceries', householdId] })
@@ -158,6 +166,7 @@ export function useAddGroceriesBulk() {
         household_id: householdId!,
         name: capitalizeFirst(item.name.trim()),
         category: item.category?.trim() || 'Övrigt',
+        subcategory: null,
         quantity: item.quantity?.trim() || null,
         note: null,
         is_checked: false,
@@ -218,16 +227,16 @@ export function useToggleGrocery() {
   })
 }
 
-// Manually set an item's category. Applies the choice to every item currently
-// on the list with the same (normalized) name, and remembers it as a learned
-// override so future adds/syncs of that name skip the model and use this
-// category. See supabase/functions/_shared/categorize.ts.
+// Manually set an item's category (department) and optional subcategory. Applies
+// the choice to every item currently on the list with the same (normalized)
+// name, and remembers it as a learned override so future adds/syncs of that name
+// skip the model. See supabase/functions/_shared/categorize.ts.
 export function useSetGroceryCategory() {
   const queryClient = useQueryClient()
   const { householdId, user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ id, name, category }: { id: string; name: string; category: string }) => {
+    mutationFn: async ({ id, name, category, subcategory = null }: { id: string; name: string; category: string; subcategory?: string | null }) => {
       const key = normalizeItemName(name)
       const current =
         queryClient.getQueryData<GroceryItem[]>(['groceries', householdId]) ?? []
@@ -238,7 +247,7 @@ export function useSetGroceryCategory() {
 
       const { error: updErr } = await supabase
         .from('grocery_items')
-        .update({ category })
+        .update({ category, subcategory })
         .in('id', targetIds)
       if (updErr) throw updErr
 
@@ -247,19 +256,19 @@ export function useSetGroceryCategory() {
       const { error: ovrErr } = await supabase
         .from('category_overrides')
         .upsert(
-          { household_id: householdId!, item_name: key, category, updated_by: user!.id },
+          { household_id: householdId!, item_name: key, category, subcategory, updated_by: user!.id },
           { onConflict: 'household_id,item_name' },
         )
       if (ovrErr) console.error('[useSetGroceryCategory] override upsert failed', ovrErr)
     },
-    onMutate: async ({ id, name, category }) => {
+    onMutate: async ({ id, name, category, subcategory = null }) => {
       await queryClient.cancelQueries({ queryKey: ['groceries', householdId] })
       const prev = queryClient.getQueryData<GroceryItem[]>(['groceries', householdId])
       const key = normalizeItemName(name)
       queryClient.setQueryData<GroceryItem[]>(['groceries', householdId], old =>
         old?.map(item =>
           item.id === id || normalizeItemName(item.name) === key
-            ? { ...item, category }
+            ? { ...item, category, subcategory }
             : item,
         ) ?? [],
       )

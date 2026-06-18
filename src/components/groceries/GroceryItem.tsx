@@ -160,13 +160,13 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
               }}
               className={clsx(
                 'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] transition-colors',
-                item.category === 'Övrigt'
+                item.category === 'Övrigt' && !item.subcategory
                   ? 'border border-dashed border-clay-line text-clay-deep hover:bg-clay-tint/50'
                   : 'bg-surface-2 text-ink-3 hover:bg-hair'
               )}
               aria-label="Ändra kategori"
             >
-              {item.category === 'Övrigt' ? (
+              {item.category === 'Övrigt' && !item.subcategory ? (
                 <>
                   <Tag size={11} />
                   Välj kategori
@@ -174,7 +174,7 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
               ) : (
                 <>
                   <Dot category={item.category} />
-                  {item.category}
+                  {item.subcategory ?? item.category}
                 </>
               )}
             </button>
@@ -225,7 +225,10 @@ export function GroceryItem({ item, aisleNumber, showAisle }: Props) {
         onClose={() => setShowCategoryPicker(false)}
         itemName={capitalizeFirst(item.name)}
         currentCategory={item.category}
-        onSelect={category => setCategory.mutate({ id: item.id, name: item.name, category })}
+        currentSubcategory={item.subcategory}
+        onSelect={({ category, subcategory }) =>
+          setCategory.mutate({ id: item.id, name: item.name, category, subcategory })
+        }
       />
     </div>
   )

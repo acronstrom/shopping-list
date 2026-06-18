@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useGroceries, useClearChecked } from '@/hooks/useGroceries'
-import { useStoreCategoryOrders } from '@/hooks/useCategories'
+import { useStoreCategoryOrders, useHouseholdSubcategories } from '@/hooks/useCategories'
 import { useUI } from '@/contexts/UIContext'
 import { GroceryItem } from './GroceryItem'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,10 +11,43 @@ import { Check, ChevronDown } from '@/lib/icons'
 import { clsx } from 'clsx'
 import type { GroceryItem as GroceryItemType } from '@/types'
 
+interface SubSection {
+  name: string | null
+  items: GroceryItemType[]
+}
+
+// Split a department's items into aisle sub-sections by subcategory, in the
+// given order, with un-subcategorized items last. Returns null when the
+// department has no subcategories or no item uses one — render flat in that case.
+function splitBySubcategory(catItems: GroceryItemType[], subOrder: string[] | undefined): SubSection[] | null {
+  if (!subOrder || subOrder.length === 0) return null
+  const bySub = new Map<string, GroceryItemType[]>()
+  const noSub: GroceryItemType[] = []
+  for (const item of catItems) {
+    if (item.subcategory && subOrder.includes(item.subcategory)) {
+      const arr = bySub.get(item.subcategory) ?? []
+      arr.push(item)
+      bySub.set(item.subcategory, arr)
+    } else {
+      noSub.push(item)
+    }
+  }
+  const sections: SubSection[] = []
+  for (const sub of subOrder) {
+    const its = bySub.get(sub)
+    if (its && its.length > 0) sections.push({ name: sub, items: its })
+  }
+  if (noSub.length > 0) sections.push({ name: null, items: noSub })
+  // Nothing actually used a subcategory → let the caller render flat.
+  if (sections.length === 1 && sections[0].name === null) return null
+  return sections
+}
+
 export function GroceryList() {
   const { data: items = [], isLoading } = useGroceries()
   const { selectedStoreId, mode } = useUI()
   const { data: storeCategoryOrders = [] } = useStoreCategoryOrders(selectedStoreId)
+  const { data: subcategories = [] } = useHouseholdSubcategories()
   const clearChecked = useClearChecked()
   const [showChecked, setShowChecked] = useState(false)
   const isShopping = mode === 'shopping'
@@ -24,6 +57,18 @@ export function GroceryList() {
     for (const row of storeCategoryOrders) map.set(row.category_name, row.position)
     return map
   }, [storeCategoryOrders])
+
+  // Ordered subcategory names per department (household sort order). Drives the
+  // aisle sub-sections inside a department on the list.
+  const subOrderByDept = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const s of subcategories) {
+      const arr = map.get(s.parent_category) ?? []
+      arr.push(s.name)
+      map.set(s.parent_category, arr)
+    }
+    return map
+  }, [subcategories])
 
   const checkedItems = useMemo(() => items.filter(i => i.is_checked), [items])
   const checkedCount = checkedItems.length
@@ -126,19 +171,39 @@ export function GroceryList() {
           <p className="text-sm text-ink-3">Tryck "Rensa markerade" när du är klar.</p>
         </div>
       ) : (
-        orderedGroups.map(([category, catItems]) => (
-          <div key={category} className="flex flex-col">
-            <GroupHeader>
-              <Dot category={category} />
-              {category}
-            </GroupHeader>
-            <Group divider>
-              {catItems.map(item => (
-                <GroceryItem key={item.id} item={item} showAisle={false} />
-              ))}
-            </Group>
-          </div>
-        ))
+        orderedGroups.map(([category, catItems]) => {
+          const sections = splitBySubcategory(catItems, subOrderByDept.get(category))
+          return (
+            <div key={category} className="flex flex-col">
+              <GroupHeader>
+                <Dot category={category} />
+                {category}
+              </GroupHeader>
+              {sections ? (
+                <div className="flex flex-col gap-2.5">
+                  {sections.map(sec => (
+                    <div key={sec.name ?? '__none'} className="flex flex-col">
+                      {sec.name && (
+                        <div className="px-1.5 pb-1 text-[12px] font-medium text-ink-4">{sec.name}</div>
+                      )}
+                      <Group divider>
+                        {sec.items.map(item => (
+                          <GroceryItem key={item.id} item={item} showAisle={false} />
+                        ))}
+                      </Group>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Group divider>
+                  {catItems.map(item => (
+                    <GroceryItem key={item.id} item={item} showAisle={false} />
+                  ))}
+                </Group>
+              )}
+            </div>
+          )
+        })
       )}
 
       {/* Collapsed checked (shop mode) */}

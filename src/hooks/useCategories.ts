@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import type { HouseholdCategory, StoreCategoryOrder } from '@/types'
+import type { HouseholdCategory, HouseholdSubcategory, StoreCategoryOrder } from '@/types'
 
 export function useHouseholdCategories() {
   const { householdId } = useAuth()
@@ -253,6 +253,112 @@ export function useSetStoreCategoryOrder() {
     },
     onSettled: (_data, _err, { storeId }) => {
       queryClient.invalidateQueries({ queryKey: ['store-category-orders', storeId] })
+    },
+  })
+}
+
+// ── Subcategories (two-level categories within a department) ──────────────────
+
+export function useHouseholdSubcategories() {
+  const { householdId } = useAuth()
+  return useQuery({
+    queryKey: ['household-subcategories', householdId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('household_subcategories')
+        .select('*')
+        .eq('household_id', householdId!)
+        .order('sort_order')
+        .order('name')
+      if (error) throw error
+      return (data ?? []) as HouseholdSubcategory[]
+    },
+    enabled: !!householdId,
+  })
+}
+
+export function useAddHouseholdSubcategory() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ parentCategory, name, sortOrder }: { parentCategory: string; name: string; sortOrder?: number }) => {
+      const trimmed = name.trim()
+      if (!trimmed) throw new Error('Underkategori saknas')
+      const { data, error } = await supabase
+        .from('household_subcategories')
+        .insert([{ household_id: householdId!, parent_category: parentCategory, name: trimmed, sort_order: sortOrder ?? 0 }])
+        .select()
+        .single()
+      if (error) {
+        if ((error as { code?: string }).code === '23505') throw new Error('Underkategorin finns redan.')
+        throw error
+      }
+      return data as HouseholdSubcategory
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['household-subcategories', householdId] })
+    },
+  })
+}
+
+export function useReorderHouseholdSubcategories() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const cached =
+        queryClient.getQueryData<HouseholdSubcategory[]>(['household-subcategories', householdId]) ?? []
+      const byId = new Map(cached.map(c => [c.id, c]))
+      const rows = orderedIds.map((id, idx) => {
+        const existing = byId.get(id)
+        if (!existing) throw new Error('Underkategori saknas i cache')
+        return {
+          id,
+          household_id: existing.household_id,
+          parent_category: existing.parent_category,
+          name: existing.name,
+          sort_order: (idx + 1) * 10,
+        }
+      })
+      const { error } = await supabase
+        .from('household_subcategories')
+        .upsert(rows, { onConflict: 'id' })
+      if (error) throw error
+    },
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey: ['household-subcategories', householdId] })
+      const prev = queryClient.getQueryData<HouseholdSubcategory[]>(['household-subcategories', householdId])
+      if (prev) {
+        const byId = new Map(prev.map(c => [c.id, c]))
+        const next = orderedIds
+          .map((id, idx) => {
+            const existing = byId.get(id)
+            return existing ? { ...existing, sort_order: (idx + 1) * 10 } : null
+          })
+          .filter((c): c is HouseholdSubcategory => c !== null)
+        queryClient.setQueryData(['household-subcategories', householdId], next)
+      }
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['household-subcategories', householdId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['household-subcategories', householdId] })
+    },
+  })
+}
+
+export function useDeleteHouseholdSubcategory() {
+  const { householdId } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase.from('household_subcategories').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['household-subcategories', householdId] })
     },
   })
 }
