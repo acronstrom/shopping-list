@@ -5,19 +5,29 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { Group, GroupHeader } from '@/components/ui/Group'
 import { RecipeCard } from '@/components/recipes/RecipeCard'
+import { RecipeCategoryTile } from '@/components/recipes/RecipeCategoryTile'
 import { NewRecipeModal } from '@/components/recipes/NewRecipeModal'
 import { useRecipes, useSetRecipeCategory, useRecipeImageUrl } from '@/hooks/useRecipes'
 import { useHouseholdRecipeCategories } from '@/hooks/useRecipeCategories'
 import { useCategorizeRecipe } from '@/hooks/useCategorizeRecipe'
-import { Plus, Search, Book, Clock, HeartFill } from '@/lib/icons'
+import { Plus, Search, Book, Clock, HeartFill, ChevronLeft } from '@/lib/icons'
 import type { RecipeWithIngredients } from '@/types'
 
 const UNCATEGORIZED_KEY = '__uncategorized__'
+const ALL_KEY = '__all__'
 
 interface CategoryGroup {
   key: string
   name: string
   recipes: RecipeWithIngredients[]
+}
+
+// Representative image for a category card: the favourite with an image, else
+// the first recipe that has one.
+function pickImagePath(list: RecipeWithIngredients[]): string | null {
+  const fav = list.find(r => r.is_favorite && r.image_path)
+  if (fav?.image_path) return fav.image_path
+  return list.find(r => r.image_path)?.image_path ?? null
 }
 
 export function RecipesPage() {
@@ -29,12 +39,16 @@ export function RecipesPage() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [backfilling, setBackfilling] = useState(false)
   const [backfillError, setBackfillError] = useState<string | null>(null)
 
-  const filteredRecipes = useMemo(() => {
+  const searching = query.trim().length > 0
+
+  // Search spans ALL recipes, regardless of the selected category.
+  const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return recipes
+    if (!q) return []
     return recipes.filter(
       r =>
         r.name.toLowerCase().includes(q) ||
@@ -44,12 +58,14 @@ export function RecipesPage() {
 
   const featured = useMemo(() => recipes.find(r => r.is_favorite) ?? null, [recipes])
 
-  const groups = useMemo<CategoryGroup[]>(() => {
-    const categoryByName = new Map<string, { name: string; sort: number }>()
-    for (const c of categories) categoryByName.set(c.name, { name: c.name, sort: c.sort_order })
+  // All recipes bucketed by category, ordered: known categories (by sort_order),
+  // then any orphan categories, then uncategorized. Drives both the "Alla" view
+  // and the category tiles.
+  const orderedGroups = useMemo<CategoryGroup[]>(() => {
+    const knownNames = new Set(categories.map(c => c.name))
     const buckets = new Map<string, RecipeWithIngredients[]>()
     const seenOrder: string[] = []
-    for (const recipe of filteredRecipes) {
+    for (const recipe of recipes) {
       const key = recipe.category && recipe.category.trim().length > 0 ? recipe.category : UNCATEGORIZED_KEY
       if (!buckets.has(key)) {
         buckets.set(key, [])
@@ -63,11 +79,9 @@ export function RecipesPage() {
       const items = buckets.get(c.name)
       if (items && items.length > 0) known.push({ key: c.name, name: c.name, recipes: items })
     }
-    const knownNames = new Set(categoryByName.keys())
     const orphans: CategoryGroup[] = []
     for (const key of seenOrder) {
-      if (key === UNCATEGORIZED_KEY) continue
-      if (knownNames.has(key)) continue
+      if (key === UNCATEGORIZED_KEY || knownNames.has(key)) continue
       orphans.push({ key, name: key, recipes: buckets.get(key)! })
     }
     orphans.sort((a, b) => a.name.localeCompare(b.name))
@@ -79,9 +93,14 @@ export function RecipesPage() {
         : []
 
     return [...known, ...orphans, ...tail]
-  }, [filteredRecipes, categories])
+  }, [recipes, categories])
 
   const uncategorizedCount = recipes.filter(r => !r.category || r.category.trim().length === 0).length
+
+  const selectedGroup =
+    selectedCategory && selectedCategory !== ALL_KEY
+      ? orderedGroups.find(g => g.key === selectedCategory) ?? null
+      : null
 
   async function handleBackfill() {
     if (backfilling) return
@@ -135,42 +154,105 @@ export function RecipesPage() {
               />
             </div>
 
-            {!query && featured && <FeaturedRecipe recipe={featured} />}
+            {searching ? (
+              // Flat search results across all recipes.
+              searchResults.length === 0 ? (
+                <p className="text-sm text-ink-3 text-center py-10">Inga recept matchar "{query}".</p>
+              ) : (
+                <Group divider>
+                  {searchResults.map(recipe => (
+                    <RecipeCard key={recipe.id} recipe={recipe} />
+                  ))}
+                </Group>
+              )
+            ) : selectedCategory === null ? (
+              // Landing: featured + backfill prompt + category tiles.
+              <>
+                {featured && <FeaturedRecipe recipe={featured} />}
 
-            {uncategorizedCount > 0 && (
-              <div className="flex items-center justify-between gap-2 px-1">
-                <p className="text-[13px] text-ink-3">{uncategorizedCount} recept saknar kategori.</p>
+                {uncategorizedCount > 0 && (
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <p className="text-[13px] text-ink-3">{uncategorizedCount} recept saknar kategori.</p>
+                    <button
+                      type="button"
+                      onClick={handleBackfill}
+                      disabled={backfilling}
+                      className="text-[13px] font-medium text-clay-deep hover:opacity-80 disabled:opacity-50 inline-flex items-center gap-1.5"
+                    >
+                      {backfilling && <Spinner className="h-3 w-3" />}
+                      {backfilling ? 'Kategoriserar…' : `Kategorisera saknande (${uncategorizedCount})`}
+                    </button>
+                  </div>
+                )}
+                {backfillError && (
+                  <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-3 py-2">{backfillError}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <RecipeCategoryTile
+                    name="Alla recept"
+                    count={recipes.length}
+                    imagePath={pickImagePath(recipes)}
+                    onClick={() => setSelectedCategory(ALL_KEY)}
+                  />
+                  {orderedGroups.map(group => (
+                    <RecipeCategoryTile
+                      key={group.key}
+                      name={group.name}
+                      count={group.recipes.length}
+                      imagePath={pickImagePath(group.recipes)}
+                      onClick={() => setSelectedCategory(group.key)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              // A category (or "Alla") is selected.
+              <>
                 <button
                   type="button"
-                  onClick={handleBackfill}
-                  disabled={backfilling}
-                  className="text-[13px] font-medium text-clay-deep hover:opacity-80 disabled:opacity-50 inline-flex items-center gap-1.5"
+                  onClick={() => setSelectedCategory(null)}
+                  className="inline-flex items-center gap-1 text-[14px] font-medium text-clay-deep hover:opacity-80 -mb-1 self-start"
                 >
-                  {backfilling && <Spinner className="h-3 w-3" />}
-                  {backfilling ? 'Kategoriserar…' : `Kategorisera saknande (${uncategorizedCount})`}
+                  <ChevronLeft size={17} /> Kategorier
                 </button>
-              </div>
-            )}
-            {backfillError && (
-              <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-3 py-2">{backfillError}</p>
-            )}
 
-            {groups.length === 0 ? (
-              <p className="text-sm text-ink-3 text-center py-10">Inga recept matchar "{query}".</p>
-            ) : (
-              groups.map(group => (
-                <div key={group.key} className="flex flex-col">
-                  <GroupHeader>
-                    {group.name}
-                    <span className="text-ink-4 font-normal normal-case tracking-normal">· {group.recipes.length}</span>
-                  </GroupHeader>
-                  <Group divider>
-                    {group.recipes.map(recipe => (
-                      <RecipeCard key={recipe.id} recipe={recipe} />
+                {selectedCategory === ALL_KEY ? (
+                  <>
+                    <h2 className="font-serif text-[22px] font-medium tracking-[-0.01em] text-ink -mt-1">
+                      Alla recept <span className="text-ink-4 text-[16px] font-normal">· {recipes.length}</span>
+                    </h2>
+                    {orderedGroups.map(group => (
+                      <div key={group.key} className="flex flex-col">
+                        <GroupHeader>
+                          {group.name}
+                          <span className="text-ink-4 font-normal normal-case tracking-normal">· {group.recipes.length}</span>
+                        </GroupHeader>
+                        <Group divider>
+                          {group.recipes.map(recipe => (
+                            <RecipeCard key={recipe.id} recipe={recipe} />
+                          ))}
+                        </Group>
+                      </div>
                     ))}
-                  </Group>
-                </div>
-              ))
+                  </>
+                ) : selectedGroup ? (
+                  <>
+                    <h2 className="font-serif text-[22px] font-medium tracking-[-0.01em] text-ink -mt-1">
+                      {selectedGroup.name}{' '}
+                      <span className="text-ink-4 text-[16px] font-normal">· {selectedGroup.recipes.length}</span>
+                    </h2>
+                    <Group divider>
+                      {selectedGroup.recipes.map(recipe => (
+                        <RecipeCard key={recipe.id} recipe={recipe} />
+                      ))}
+                    </Group>
+                  </>
+                ) : (
+                  // The selected category no longer has recipes (e.g. all moved).
+                  <p className="text-sm text-ink-3 text-center py-10">Inga recept i den här kategorin längre.</p>
+                )}
+              </>
             )}
           </>
         )}
