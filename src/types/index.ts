@@ -11,6 +11,7 @@ export type CategoryOverride = Database['public']['Tables']['category_overrides'
 export type HouseholdSubcategory = Database['public']['Tables']['household_subcategories']['Row']
 export type HouseholdRecipeCategory = Database['public']['Tables']['household_recipe_categories']['Row']
 export type StoreCategoryOrder = Database['public']['Tables']['store_category_orders']['Row']
+export type StoreCategoryMap = Database['public']['Tables']['store_category_map']['Row']
 export type StoreOffer = Database['public']['Tables']['store_offers']['Row']
 export type Recipe = Database['public']['Tables']['recipes']['Row']
 export type RecipeIngredient = Database['public']['Tables']['recipe_ingredients']['Row']

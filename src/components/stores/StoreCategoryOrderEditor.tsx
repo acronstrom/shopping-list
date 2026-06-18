@@ -25,7 +25,11 @@ import {
   useResetStoreCategoriesToHousehold,
   useSetStoreCategoryOrder,
   useStoreCategoryOrders,
+  useStoreCategoryMap,
+  useSetStoreCategoryMapping,
+  useApplyStorePreset,
 } from '@/hooks/useCategories'
+import { STORE_PRESETS } from '@/lib/storePresets'
 
 interface Props {
   storeId: string
@@ -34,13 +38,23 @@ interface Props {
 export function StoreCategoryOrderEditor({ storeId }: Props) {
   const { data: householdCategories = [], isLoading: loadingCats } = useHouseholdCategories()
   const { data: storeOrders = [], isLoading: loadingOrder } = useStoreCategoryOrders(storeId)
+  const { data: storeMap = [] } = useStoreCategoryMap(storeId)
   const setOrder = useSetStoreCategoryOrder()
   const addStoreCategory = useAddStoreCategory()
   const removeStoreCategory = useRemoveStoreCategory()
   const resetCategories = useResetStoreCategoriesToHousehold()
+  const setMapping = useSetStoreCategoryMapping()
+  const applyPreset = useApplyStorePreset()
   const [newCategory, setNewCategory] = useState('')
   const [error, setError] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmPreset, setConfirmPreset] = useState<string | null>(null)
+
+  const sectionByCategory = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const row of storeMap) map.set(row.household_category, row.store_section)
+    return map
+  }, [storeMap])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -68,7 +82,9 @@ export function StoreCategoryOrderEditor({ storeId }: Props) {
     setOrder.isPending ||
     addStoreCategory.isPending ||
     removeStoreCategory.isPending ||
-    resetCategories.isPending
+    resetCategories.isPending ||
+    setMapping.isPending ||
+    applyPreset.isPending
 
   if (loadingCats || loadingOrder) {
     return <p className="text-sm text-ink-4 py-4 text-center">Laddar kategorier…</p>
@@ -118,11 +134,68 @@ export function StoreCategoryOrderEditor({ storeId }: Props) {
     }
   }
 
+  async function handleApplyPreset(presetId: string) {
+    setError('')
+    setConfirmPreset(null)
+    const preset = STORE_PRESETS.find(p => p.id === presetId)
+    if (!preset) return
+    try {
+      await applyPreset.mutateAsync({ storeId, preset })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Det gick inte att använda mallen')
+    }
+  }
+
+  async function handleSetMapping(householdCategory: string, storeSection: string) {
+    setError('')
+    if (!storeSection) return
+    try {
+      await setMapping.mutateAsync({ storeId, householdCategory, storeSection })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Det gick inte att spara kopplingen')
+    }
+  }
+
   return (
     <div>
       <p className="text-[11px] text-ink-4 mb-2 select-none">
         Dra för att ändra ordningen. Lägg till eller ta bort kategorier som inte passar i den här butiken.
       </p>
+
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {STORE_PRESETS.map(p =>
+          confirmPreset === p.id ? (
+            <span key={p.id} className="inline-flex items-center gap-2 text-xs">
+              <span className="text-ink-2">Ersätt butikens kategorier med {p.label}-mallen?</span>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(p.id)}
+                disabled={isBusy}
+                className="px-2.5 py-1 rounded-[10px] bg-clay text-white font-medium hover:bg-clay-deep disabled:opacity-40"
+              >
+                Ja
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmPreset(null)}
+                className="px-2.5 py-1 rounded-[10px] text-ink-2 hover:bg-surface-2"
+              >
+                Avbryt
+              </button>
+            </span>
+          ) : (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setConfirmPreset(p.id)}
+              disabled={isBusy}
+              className="px-3 py-1.5 rounded-full border border-hair text-xs font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-40"
+            >
+              Använd {p.label}-mall
+            </button>
+          )
+        )}
+      </div>
 
       {usingFallback && (
         <p className="text-[11px] text-clay-deep bg-clay-tint rounded-[10px] px-2.5 py-1.5 mb-2">
@@ -200,6 +273,35 @@ export function StoreCategoryOrderEditor({ storeId }: Props) {
           </button>
         )}
       </div>
+
+      {householdCategories.length > 0 && orderedCategoryNames.length > 0 && (
+        <div className="mt-5">
+          <p className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em] mb-1">
+            Koppling till sektioner
+          </p>
+          <p className="text-[11px] text-ink-4 mb-2">
+            Vilken sektion varje generisk kategori hamnar i när du handlar i den här butiken.
+          </p>
+          <ul className="rounded-[14px] border border-hair overflow-hidden bg-surface divide-y divide-hair-2">
+            {householdCategories.map(cat => (
+              <li key={cat.id} className="flex items-center gap-2 px-3 py-2">
+                <span className="text-sm text-ink flex-1 truncate">{cat.name}</span>
+                <select
+                  value={sectionByCategory.get(cat.name) ?? ''}
+                  onChange={e => handleSetMapping(cat.name, e.target.value)}
+                  disabled={isBusy}
+                  className="rounded-[10px] border border-hair px-2 py-1.5 text-sm text-ink bg-surface focus:outline-none focus:ring-2 focus:ring-clay/30 max-w-[55%] disabled:opacity-40"
+                >
+                  <option value="">(samma namn)</option>
+                  {orderedCategoryNames.map(sec => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && <p className="mt-2 text-sm text-rose bg-rose-tint rounded-[12px] px-3 py-2">{error}</p>}
     </div>

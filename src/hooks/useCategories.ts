@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import type { HouseholdCategory, HouseholdSubcategory, StoreCategoryOrder } from '@/types'
+import type { HouseholdCategory, HouseholdSubcategory, StoreCategoryOrder, StoreCategoryMap } from '@/types'
+import type { StorePreset } from '@/lib/storePresets'
 
 export function useHouseholdCategories() {
   const { householdId } = useAuth()
@@ -359,6 +360,76 @@ export function useDeleteHouseholdSubcategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['household-subcategories', householdId] })
+    },
+  })
+}
+
+// ── Store category map (per-store lens: generic category -> store section) ─────
+
+export function useStoreCategoryMap(storeId: string | null) {
+  return useQuery({
+    queryKey: ['store-category-map', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('store_category_map')
+        .select('*')
+        .eq('store_id', storeId!)
+      if (error) throw error
+      return (data ?? []) as StoreCategoryMap[]
+    },
+    enabled: !!storeId,
+  })
+}
+
+export function useSetStoreCategoryMapping() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ storeId, householdCategory, storeSection }: { storeId: string; householdCategory: string; storeSection: string }) => {
+      const { error } = await supabase
+        .from('store_category_map')
+        .upsert(
+          { store_id: storeId, household_category: householdCategory, store_section: storeSection },
+          { onConflict: 'store_id,household_category' },
+        )
+      if (error) throw error
+    },
+    onSettled: (_data, _err, { storeId }) => {
+      queryClient.invalidateQueries({ queryKey: ['store-category-map', storeId] })
+    },
+  })
+}
+
+// Apply a store layout preset: replace the store's sections + order and the
+// generic->section mapping. Both remain editable afterwards.
+export function useApplyStorePreset() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ storeId, preset }: { storeId: string; preset: StorePreset }) => {
+      await supabase.from('store_category_orders').delete().eq('store_id', storeId)
+      const orderRows = preset.sections.map((name, i) => ({
+        store_id: storeId,
+        category_name: name,
+        position: i,
+      }))
+      if (orderRows.length > 0) {
+        const { error } = await supabase.from('store_category_orders').insert(orderRows)
+        if (error) throw error
+      }
+
+      await supabase.from('store_category_map').delete().eq('store_id', storeId)
+      const mapRows = Object.entries(preset.mapping).map(([householdCategory, storeSection]) => ({
+        store_id: storeId,
+        household_category: householdCategory,
+        store_section: storeSection,
+      }))
+      if (mapRows.length > 0) {
+        const { error } = await supabase.from('store_category_map').insert(mapRows)
+        if (error) throw error
+      }
+    },
+    onSettled: (_data, _err, { storeId }) => {
+      queryClient.invalidateQueries({ queryKey: ['store-category-orders', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['store-category-map', storeId] })
     },
   })
 }

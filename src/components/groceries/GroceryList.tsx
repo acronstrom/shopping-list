@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useGroceries, useClearChecked } from '@/hooks/useGroceries'
-import { useStoreCategoryOrders, useHouseholdSubcategories } from '@/hooks/useCategories'
+import { useStoreCategoryOrders, useHouseholdSubcategories, useStoreCategoryMap } from '@/hooks/useCategories'
 import { useUI } from '@/contexts/UIContext'
 import { GroceryItem } from './GroceryItem'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -47,6 +47,7 @@ export function GroceryList() {
   const { data: items = [], isLoading } = useGroceries()
   const { selectedStoreId, mode } = useUI()
   const { data: storeCategoryOrders = [] } = useStoreCategoryOrders(selectedStoreId)
+  const { data: storeCategoryMap = [] } = useStoreCategoryMap(selectedStoreId)
   const { data: subcategories = [] } = useHouseholdSubcategories()
   const clearChecked = useClearChecked()
   const [showChecked, setShowChecked] = useState(false)
@@ -58,17 +59,40 @@ export function GroceryList() {
     return map
   }, [storeCategoryOrders])
 
-  // Ordered subcategory names per department (household sort order). Drives the
-  // aisle sub-sections inside a department on the list.
-  const subOrderByDept = useMemo(() => {
-    const map = new Map<string, string[]>()
-    for (const s of subcategories) {
-      const arr = map.get(s.parent_category) ?? []
-      arr.push(s.name)
-      map.set(s.parent_category, arr)
+  // Store "lens": when a store is selected and it defines a generic->section
+  // mapping, group items by store section instead of by their generic category.
+  const useLens = !!selectedStoreId && storeCategoryMap.length > 0
+  const categoryToSection = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const row of storeCategoryMap) map.set(row.household_category, row.store_section)
+    return map
+  }, [storeCategoryMap])
+  // A section's dot colour follows the first generic category mapped into it.
+  const sectionDotCategory = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const row of storeCategoryMap) {
+      if (!map.has(row.store_section)) map.set(row.store_section, row.household_category)
     }
     return map
-  }, [subcategories])
+  }, [storeCategoryMap])
+  const sectionFor = (category: string) =>
+    useLens ? categoryToSection.get(category) ?? category : category
+
+  // All subcategory names in a stable per-department order. Drives the aisle
+  // sub-sections inside a group regardless of whether the group key is a generic
+  // category or a store section.
+  const allSubOrder = useMemo(
+    () =>
+      [...subcategories]
+        .sort(
+          (a, b) =>
+            a.parent_category.localeCompare(b.parent_category, 'sv') ||
+            a.sort_order - b.sort_order ||
+            a.name.localeCompare(b.name, 'sv'),
+        )
+        .map(s => s.name),
+    [subcategories]
+  )
 
   const checkedItems = useMemo(() => items.filter(i => i.is_checked), [items])
   const checkedCount = checkedItems.length
@@ -85,9 +109,9 @@ export function GroceryList() {
   const orderedGroups = useMemo(() => {
     const buckets = new Map<string, GroceryItemType[]>()
     for (const item of visibleItems) {
-      const cat = item.category
-      if (!buckets.has(cat)) buckets.set(cat, [])
-      buckets.get(cat)!.push(item)
+      const key = sectionFor(item.category)
+      if (!buckets.has(key)) buckets.set(key, [])
+      buckets.get(key)!.push(item)
     }
     for (const list of buckets.values()) {
       list.sort((a, b) => {
@@ -103,7 +127,8 @@ export function GroceryList() {
       }
       return a[0].localeCompare(b[0], 'sv')
     })
-  }, [visibleItems, selectedStoreId, categoryPosition])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleItems, selectedStoreId, categoryPosition, categoryToSection, useLens])
 
   if (isLoading) {
     return (
@@ -171,13 +196,13 @@ export function GroceryList() {
           <p className="text-sm text-ink-3">Tryck "Rensa markerade" när du är klar.</p>
         </div>
       ) : (
-        orderedGroups.map(([category, catItems]) => {
-          const sections = splitBySubcategory(catItems, subOrderByDept.get(category))
+        orderedGroups.map(([groupKey, catItems]) => {
+          const sections = splitBySubcategory(catItems, allSubOrder)
           return (
-            <div key={category} className="flex flex-col">
+            <div key={groupKey} className="flex flex-col">
               <GroupHeader>
-                <Dot category={category} />
-                {category}
+                <Dot category={sectionDotCategory.get(groupKey) ?? groupKey} />
+                {groupKey}
               </GroupHeader>
               {sections ? (
                 <div className="flex flex-col gap-2.5">

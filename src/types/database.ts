@@ -567,6 +567,29 @@ export interface Database {
           updated_at?: string
         }
       }
+      store_category_map: {
+        Row: {
+          id: string
+          store_id: string
+          household_category: string
+          store_section: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          household_category: string
+          store_section: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          household_category?: string
+          store_section?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
