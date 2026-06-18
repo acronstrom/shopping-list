@@ -111,7 +111,9 @@ Ingredienser:
 
 Instruktioner:
 - "instructions": de matlagningssteg som visas i receptet, översatta till svenska.
-- Numrera stegen ("1. ", "2. ", …) och separera varje steg med en radbrytning (\\n).
+- Numrera stegen ("1. ", "2. ", …).
+- Separera ALLTID varje steg med en TOM RAD, dvs två radbrytningar ("\\n\\n") mellan stegen – inte bara en enkel radbrytning. Exempel: "1. Koka pastan.\\n\\n2. Stek löken.\\n\\n3. Blanda ihop."
+- Om receptet har flera separata numrerade listor/avsnitt (t.ex. "Sås" och "Montering"), separera även dem med en tom rad.
 - Bevara stegens ordning och innehåll noggrant — slå inte ihop och hitta inte på egna steg.
 - Om receptet inte innehåller några instruktioner (t.ex. bara en ingredienslista), returnera null.
 

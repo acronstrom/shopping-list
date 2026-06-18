@@ -241,7 +241,8 @@ function normalizeInstructions(value: unknown): string | null {
       steps.push(`${counter}. ${text}`)
       counter++
     }
-    return steps.length > 0 ? steps.join("\n") : null
+    // Blank line between steps so the client splits them into separate steps.
+    return steps.length > 0 ? steps.join("\n\n") : null
   }
 
   if (value && typeof value === "object") {
