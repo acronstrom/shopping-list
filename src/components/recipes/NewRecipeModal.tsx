@@ -707,16 +707,17 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
 
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-[0.06em]">
-            Källa
+            Källa / Instagram-reel
           </span>
           <input
             type="url"
             inputMode="url"
             value={sourceUrl}
             onChange={e => setSourceUrl(e.target.value)}
-            placeholder="https://…"
+            placeholder="https://… (t.ex. en Instagram-reel)"
             className="rounded-xl border border-hair bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay-line"
           />
+          <span className="text-[11px] text-ink-4">Klistra in länken till reelen du sparade receptet från – öppnas direkt från receptet.</span>
         </label>
 
         <div className="flex items-center justify-between gap-2">

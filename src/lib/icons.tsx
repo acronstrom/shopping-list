@@ -126,6 +126,16 @@ export function Camera(p: IconProps) {
   )
 }
 
+export function Instagram(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
+      <circle cx="12" cy="12" r="3.6" />
+      <circle cx="16.6" cy="7.4" r="1" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
 export function Heart(p: IconProps) {
   return <Svg {...p}><path d="M12 20s-7-4.4-9-9.2C1.6 7.3 3.3 4.5 6.2 4.5c1.9 0 3.1 1.1 3.8 2.2.7-1.1 1.9-2.2 3.8-2.2 2.9 0 4.6 2.8 3.2 6.3C19 15.6 12 20 12 20Z" /></Svg>
 }

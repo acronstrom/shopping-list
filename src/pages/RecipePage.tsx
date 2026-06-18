@@ -25,12 +25,22 @@ import {
   Flame,
   Heart,
   HeartFill,
+  Instagram,
+  Link,
   Minus,
   Plus,
 } from '@/lib/icons'
 import { clsx } from 'clsx'
 
 type Mode = 'shop' | 'cook'
+
+function isInstagramUrl(url: string): boolean {
+  try {
+    return /(^|\.)instagram\.com$/.test(new URL(url).hostname)
+  } catch {
+    return false
+  }
+}
 
 interface ScaledIngredient {
   id: string
@@ -342,16 +352,28 @@ export function RecipePage() {
         </div>
 
         {planError && <p className="text-[13px] text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5 mt-2">{planError}</p>}
-        {recipe.source_url && (
-          <a
-            href={recipe.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-[13px] text-ink-3 hover:text-clay-deep underline underline-offset-2 mt-2.5"
-          >
-            Källa ↗
-          </a>
-        )}
+        {recipe.source_url &&
+          (isInstagramUrl(recipe.source_url) ? (
+            <a
+              href={recipe.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[14px] font-medium text-white bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] shadow-card active:opacity-90 transition-opacity"
+            >
+              <Instagram size={17} />
+              Öppna reel
+            </a>
+          ) : (
+            <a
+              href={recipe.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-hair bg-surface px-3.5 py-2 text-[14px] font-medium text-ink-2 hover:text-clay-deep active:opacity-90 transition-opacity"
+            >
+              <Link size={16} />
+              Öppna källa
+            </a>
+          ))}
       </div>
 
       <div className="px-[18px] pt-6 flex flex-col gap-6">
