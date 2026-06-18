@@ -141,9 +141,11 @@ function buildCategoryList(categories: string[], byParent: Record<string, string
 }
 
 const SYSTEM_RULES =
-  `Du kategoriserar matvaror på svenska. Listan nedan har avdelningar; vissa avdelningar har underkategorier efter ett kolon. ` +
-  `Svara med den MEST specifika kategorin: om en underkategori passar, svara med underkategorins namn, annars avdelningens namn. ` +
-  `Om varan inte tydligt passar någonstans, svara "Övrigt". Svara exakt som namnet står i listan, utan extra text, citattecken eller förklaring.`
+  `Du kategoriserar matvaror på svenska. Listan nedan har en avdelning per rad; efter ett kolon listas avdelningens underkategorier. ` +
+  `Svara med EXAKT ett namn som finns i listan – antingen en underkategori eller en avdelning. Hitta ALDRIG på egna namn. ` +
+  `Välj den mest specifika underkategori som passar; om ingen underkategori passar, välj den avdelning som passar bäst (t.ex. kaffe och läsk hör till "Dryck"). ` +
+  `Välj alltid den närmaste kategorin. Använd "Övrigt" ENDAST om varan verkligen inte hör hemma i någon av kategorierna. ` +
+  `Svara med enbart kategorinamnet, utan extra text, citattecken eller förklaring.`
 
 // Categorize a single item name. Returns "Övrigt" on any failure (missing key,
 // network error, unparseable response) — categorization is always best-effort.
