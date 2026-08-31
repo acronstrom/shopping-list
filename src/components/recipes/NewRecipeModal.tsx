@@ -127,6 +127,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const [urlValue, setUrlValue] = useState('')
   const [urlError, setUrlError] = useState<string | null>(null)
   const [importingImage, setImportingImage] = useState(false)
+  const [savedRecipeId, setSavedRecipeId] = useState<string | null>(null)
   const parseRecipe = useParseRecipe()
   const importUrl = useImportRecipeUrl()
   const addRecipe = useAddRecipe()
@@ -160,6 +161,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setUrlValue('')
     setUrlError(null)
     setImportingImage(false)
+    setSavedRecipeId(null)
   }
 
   const previewImageUrl = pendingImageDataUrl ?? existingImageUrl ?? null
@@ -280,11 +282,15 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
           const file = await fetchImageAsFile(imported.image)
           setPendingImageDataUrl(await fileToCompressedDataUrl(file))
           setPendingImageFile(file)
-        } catch {
+        } catch (imgErr) {
           // Host blocks cross-origin reads, or it isn't a usable image. Import
-          // the recipe without a photo rather than promise one we can't keep.
+          // the recipe without a photo rather than promise one we can't keep,
+          // but say so instead of leaving an unexplained blank.
+          console.error('[NewRecipeModal] recipe image download failed', imported.image, imgErr)
           setPendingImageDataUrl(null)
           setPendingImageFile(null)
+          const reason = imgErr instanceof Error ? imgErr.message : 'okänt fel'
+          setImageError(`Receptets bild kunde inte hämtas: ${reason}. Välj en egen bild om du vill ha en.`)
         } finally {
           setImportingImage(false)
         }
@@ -386,80 +392,74 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
       .map(t => t.trim())
       .filter(Boolean)
     try {
-      const selectedCategory = category.trim() || null
-      if (editing && recipe) {
-        let finalImagePath = imagePath
-        if (pendingImageFile && householdId) {
-          setImageUploading(true)
-          finalImagePath = await uploadRecipeImage({
-            file: pendingImageFile,
-            householdId,
-            recipeId: recipe.id,
-          })
-        }
-        await updateRecipe.mutateAsync({
-          id: recipe.id,
-          name: trimmedName,
-          instructions: instructions.trim() || null,
-          servings: cleanServings,
-          category: selectedCategory,
-          ingredients,
-          image_path: finalImagePath,
-          source_url: trimmedSource,
-          prep_time_minutes: prepValue,
-          cook_time_minutes: cookValue,
-          difficulty: difficulty || null,
-          rating,
-          tags: cleanTags,
-          is_favorite: isFavorite,
-        })
-        onSaved?.(recipe.id)
-      } else {
-        const saved = await addRecipe.mutateAsync({
-          name: trimmedName,
-          instructions: instructions.trim() || null,
-          servings: cleanServings,
-          category: selectedCategory,
-          ingredients,
-          image_path: null,
-          source_url: trimmedSource,
-          prep_time_minutes: prepValue,
-          cook_time_minutes: cookValue,
-          difficulty: difficulty || null,
-          rating,
-          tags: cleanTags,
-          is_favorite: isFavorite,
-        })
-        if (pendingImageFile && householdId) {
-          try {
-            setImageUploading(true)
-            const path = await uploadRecipeImage({
-              file: pendingImageFile,
-              householdId,
-              recipeId: saved.id,
-            })
-            await updateRecipe.mutateAsync({
-              id: saved.id,
-              name: trimmedName,
-              instructions: instructions.trim() || null,
-              servings: cleanServings,
-              category: selectedCategory,
-              ingredients,
-              image_path: path,
-              source_url: trimmedSource,
-              prep_time_minutes: prepValue,
-              cook_time_minutes: cookValue,
-              difficulty: difficulty || null,
-              rating,
-              tags: cleanTags,
-              is_favorite: isFavorite,
-            })
-          } catch (uploadErr) {
-            console.error('[NewRecipeModal] image upload failed', uploadErr)
-          }
-        }
-        onSaved?.(saved.id)
+      const fields = {
+        name: trimmedName,
+        instructions: instructions.trim() || null,
+        servings: cleanServings,
+        category: category.trim() || null,
+        ingredients,
+        source_url: trimmedSource,
+        prep_time_minutes: prepValue,
+        cook_time_minutes: cookValue,
+        difficulty: difficulty || null,
+        rating,
+        tags: cleanTags,
+        is_favorite: isFavorite,
       }
+
+      // The recipe is saved whether or not the photo makes it, so a failed
+      // upload is reported on its own rather than swallowed — a picture that
+      // silently disappears on save is worse than one that says why.
+      const uploadImage = async (
+        recipeId: string,
+      ): Promise<{ path: string | null; warning: string | null }> => {
+        if (!pendingImageFile) return { path: imagePath, warning: null }
+        if (!householdId) {
+          return { path: imagePath, warning: 'Receptet sparades, men bilden kunde inte laddas upp: inget hushåll är valt.' }
+        }
+        try {
+          setImageUploading(true)
+          const path = await uploadRecipeImage({ file: pendingImageFile, householdId, recipeId })
+          return { path, warning: null }
+        } catch (uploadErr) {
+          console.error('[NewRecipeModal] image upload failed', uploadErr)
+          const reason = uploadErr instanceof Error ? uploadErr.message : 'okänt fel'
+          return { path: imagePath, warning: `Receptet sparades, men bilden kunde inte laddas upp: ${reason}` }
+        } finally {
+          setImageUploading(false)
+        }
+      }
+
+      // savedRecipeId keeps a retry from creating a second recipe after an
+      // attempt that stored the recipe but failed on the image.
+      const existingId = recipe?.id ?? savedRecipeId
+      let recipeId: string
+      let imageWarning: string | null
+
+      if (existingId) {
+        recipeId = existingId
+        const uploaded = await uploadImage(existingId)
+        imageWarning = uploaded.warning
+        await updateRecipe.mutateAsync({ id: existingId, ...fields, image_path: uploaded.path })
+      } else {
+        const saved = await addRecipe.mutateAsync({ ...fields, image_path: null })
+        recipeId = saved.id
+        setSavedRecipeId(saved.id)
+        const uploaded = await uploadImage(saved.id)
+        imageWarning = uploaded.warning
+        if (uploaded.path) {
+          await updateRecipe.mutateAsync({ id: saved.id, ...fields, image_path: uploaded.path })
+        }
+      }
+
+      if (imageWarning) {
+        // Stay open so the message is readable — navigating away would hide it.
+        // Pressing Spara again retries just the image.
+        setError(imageWarning)
+        return
+      }
+
+      onSaved?.(recipeId)
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Det gick inte att spara receptet')
