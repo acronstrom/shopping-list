@@ -9,7 +9,7 @@ import { useImportRecipeUrl } from '@/hooks/useImportRecipeUrl'
 import { useAddRecipe, useUpdateRecipe, useRecipeImageUrl, type RecipeIngredientInput } from '@/hooks/useRecipes'
 import { useHouseholdRecipeCategories } from '@/hooks/useRecipeCategories'
 import { useAuth } from '@/contexts/AuthContext'
-import { fileToCompressedDataUrl } from '@/lib/image'
+import { fetchImageAsFile, fileToCompressedDataUrl } from '@/lib/image'
 import { uploadRecipeImage } from '@/lib/recipeImage'
 import { dedupeIngredientsBySection, parseIngredientLine } from '@/lib/parseIngredient'
 import type { RecipeWithIngredients } from '@/types'
@@ -126,6 +126,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   const [parseProgress, setParseProgress] = useState<{ current: number; total: number } | null>(null)
   const [urlValue, setUrlValue] = useState('')
   const [urlError, setUrlError] = useState<string | null>(null)
+  const [importingImage, setImportingImage] = useState(false)
   const parseRecipe = useParseRecipe()
   const importUrl = useImportRecipeUrl()
   const addRecipe = useAddRecipe()
@@ -158,6 +159,7 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
     setParseProgress(null)
     setUrlValue('')
     setUrlError(null)
+    setImportingImage(false)
   }
 
   const previewImageUrl = pendingImageDataUrl ?? existingImageUrl ?? null
@@ -270,8 +272,22 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
       if (imported.servings) setServings(imported.servings)
       if (imported.sourceUrl && !sourceUrl.trim()) setSourceUrl(imported.sourceUrl)
       if (imported.image && !pendingImageDataUrl && !imagePath) {
-        setPendingImageDataUrl(imported.image)
-        setPendingImageFile(null)
+        // Download it here so it goes through the same upload path as a picked
+        // file — otherwise the preview shows a photo that is never stored and
+        // silently disappears on save.
+        setImportingImage(true)
+        try {
+          const file = await fetchImageAsFile(imported.image)
+          setPendingImageDataUrl(await fileToCompressedDataUrl(file))
+          setPendingImageFile(file)
+        } catch {
+          // Host blocks cross-origin reads, or it isn't a usable image. Import
+          // the recipe without a photo rather than promise one we can't keep.
+          setPendingImageDataUrl(null)
+          setPendingImageFile(null)
+        } finally {
+          setImportingImage(false)
+        }
       }
       if (imported.prepTimeMinutes && !prepTime) {
         setPrepTime(imported.prepTimeMinutes.toString())
@@ -458,7 +474,9 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
   )
   const parsing = parseRecipe.isPending
   const saving = addRecipe.isPending || updateRecipe.isPending
-  const importing = importUrl.isPending
+  // Covers the image download too, so the button doesn't go idle while the
+  // photo is still on its way in.
+  const importing = importUrl.isPending || importingImage
   const hasMultipleSections = sections.length > 1 || sections.some(s => s.name.trim().length > 0)
 
   return (
