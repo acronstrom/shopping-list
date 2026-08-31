@@ -1,10 +1,18 @@
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
+export interface ImportedIngredientSection {
+  name: string | null
+  ingredients: string[]
+}
+
 export interface ImportedRecipe {
   name: string
   servings: number | null
   ingredients: string[]
+  // Set only when the import could tell the ingredients apart by sub-heading
+  // ("Pajsmul", "Topping", …). Recipes parsed from schema.org stay flat.
+  ingredientSections: ImportedIngredientSection[] | null
   instructions: string | null
   image: string | null
   sourceUrl: string
@@ -30,6 +38,7 @@ export function useImportRecipeUrl() {
         name: data.name ?? 'Okänt recept',
         servings: data.servings ?? null,
         ingredients: data.ingredients ?? [],
+        ingredientSections: data.ingredientSections ?? null,
         instructions: data.instructions ?? null,
         image: data.image ?? null,
         sourceUrl: data.sourceUrl ?? url,

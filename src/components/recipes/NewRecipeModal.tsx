@@ -281,13 +281,22 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
       }
 
       if (imported.ingredients.length > 0) {
-        const parsedRows: ParsedIngredient[] = imported.ingredients.map(line => {
+        // Sections come through from recipe blogs ("Pajsmul", "Topping", …);
+        // schema.org recipes have no sub-headings, so they land in one list.
+        const lines: { line: string; section: string | null }[] =
+          imported.ingredientSections?.length
+            ? imported.ingredientSections.flatMap(s =>
+                s.ingredients.map(line => ({ line, section: s.name })),
+              )
+            : imported.ingredients.map(line => ({ line, section: null }))
+
+        const parsedRows: ParsedIngredient[] = lines.map(({ line, section }) => {
           const parsed = parseIngredientLine(line)
           return {
             name: parsed.name,
             quantity: parsed.quantity ?? null,
             category: 'Övrigt',
-            section: null,
+            section,
           }
         })
         setSections(prev => applyParsedToSections(prev, parsedRows))
@@ -490,7 +499,8 @@ export function NewRecipeModal({ open, onClose, recipe, onSaved }: Props) {
               <p className="text-xs text-rose bg-rose-tint rounded-[12px] px-2.5 py-1.5">{urlError}</p>
             )}
             <p className="text-[11px] text-ink-3">
-              Funkar för ICA, Köket, Allt om Mat och de flesta större receptsajter (schema.org/Recipe).
+              Funkar för ICA, Köket, Allt om Mat och de flesta större receptsajter — och för
+              receptbloggar som ELLE, där receptet läses ur artikeltexten.
             </p>
           </div>
         )}
