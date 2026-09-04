@@ -12,8 +12,12 @@ import {
 } from '@/hooks/useRecipes'
 import { useAddGroceriesBulk } from '@/hooks/useGroceries'
 import { useUpsertMealPlanEntry } from '@/hooks/useMealPlan'
+import { useCookProgress } from '@/hooks/useCookProgress'
+import { useStepTimers, type TimerState } from '@/hooks/useStepTimers'
+import { useWakeLock } from '@/hooks/useWakeLock'
 import { scaleQuantity } from '@/lib/recipeScale'
 import { splitInstructions } from '@/lib/parseInstructions'
+import { parseDurations, formatRemaining, type StepDuration } from '@/lib/parseDuration'
 import { dedupeIngredients } from '@/lib/parseIngredient'
 import { toIsoDate } from '@/lib/week'
 import {
@@ -22,6 +26,7 @@ import {
   Calendar,
   Check,
   ChevronLeft,
+  Clock,
   Flame,
   Heart,
   HeartFill,
@@ -29,6 +34,7 @@ import {
   Link,
   Minus,
   Plus,
+  X,
 } from '@/lib/icons'
 import { clsx } from 'clsx'
 
@@ -74,8 +80,6 @@ export function RecipePage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [overrideServings, setOverrideServings] = useState<number | null>(null)
   const [skipped, setSkipped] = useState<Set<string>>(new Set())
-  const [ingredientsDone, setIngredientsDone] = useState<Set<string>>(new Set())
-  const [stepsDone, setStepsDone] = useState<Set<number>>(new Set())
   const [justAddedCount, setJustAddedCount] = useState(0)
   const [mode, setMode] = useState<Mode>('cook')
   const [planDate, setPlanDate] = useState<string>(toIsoDate(new Date()))
@@ -125,29 +129,25 @@ export function RecipePage() {
 
   const steps = useMemo(() => splitInstructions(recipe?.instructions), [recipe?.instructions])
 
+  const stepDurations = useMemo(() => steps.map(parseDurations), [steps])
+
+  const ingredientIds = useMemo(() => scaledIngredients.map(i => i.id), [scaledIngredients])
+  const { ingredientsDone, stepsDone, toggleIngredient, toggleStep, clear } = useCookProgress(
+    recipe?.id ?? null,
+    ingredientIds,
+    steps.length,
+  )
+  const timers = useStepTimers()
+
+  // Hands are covered in flour and nobody taps the screen for ten minutes at a
+  // stretch — the display must not sleep while cook mode is open.
+  useWakeLock(mode === 'cook')
+
   function toggleSkipped(key: string) {
     setSkipped(prev => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
-      return next
-    })
-  }
-
-  function toggleIngredientDone(ingredientId: string) {
-    setIngredientsDone(prev => {
-      const next = new Set(prev)
-      if (next.has(ingredientId)) next.delete(ingredientId)
-      else next.add(ingredientId)
-      return next
-    })
-  }
-
-  function toggleStepDone(index: number) {
-    setStepsDone(prev => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
       return next
     })
   }
@@ -188,11 +188,6 @@ export function RecipePage() {
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : 'Kunde inte spara i veckoplanen')
     }
-  }
-
-  function handleClearProgress() {
-    setIngredientsDone(new Set())
-    setStepsDone(new Set())
   }
 
   if (isLoading) {
@@ -261,14 +256,23 @@ export function RecipePage() {
               </span>
             )}
             {recipe.difficulty && (
-              <span className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair capitalize">
+              <button
+                type="button"
+                onClick={() => navigate(`/recipes?difficulty=${encodeURIComponent(recipe.difficulty!)}`)}
+                className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair capitalize hover:text-clay-deep hover:border-clay-line transition-colors"
+              >
                 {recipe.difficulty}
-              </span>
+              </button>
             )}
             {recipe.tags?.map(tag => (
-              <span key={tag} className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair">
+              <button
+                key={tag}
+                type="button"
+                onClick={() => navigate(`/recipes?tag=${encodeURIComponent(tag)}`)}
+                className="px-[11px] py-[5px] rounded-full text-[12px] font-medium bg-surface text-ink-2 border border-hair hover:text-clay-deep hover:border-clay-line transition-colors"
+              >
                 {tag}
-              </span>
+              </button>
             ))}
           </div>
         )}
@@ -393,11 +397,13 @@ export function RecipePage() {
           <CookSection
             sections={cookSections}
             ingredientsDone={ingredientsDone}
-            onToggleIngredient={toggleIngredientDone}
+            onToggleIngredient={toggleIngredient}
             steps={steps}
+            stepDurations={stepDurations}
             stepsDone={stepsDone}
-            onToggleStep={toggleStepDone}
-            onClearProgress={handleClearProgress}
+            onToggleStep={toggleStep}
+            onClearProgress={clear}
+            timers={timers}
           />
         )}
 
@@ -550,9 +556,11 @@ interface CookSectionProps {
   ingredientsDone: Set<string>
   onToggleIngredient: (id: string) => void
   steps: string[]
+  stepDurations: StepDuration[][]
   stepsDone: Set<number>
   onToggleStep: (index: number) => void
   onClearProgress: () => void
+  timers: ReturnType<typeof useStepTimers>
 }
 
 function CookSection({
@@ -560,9 +568,11 @@ function CookSection({
   ingredientsDone,
   onToggleIngredient,
   steps,
+  stepDurations,
   stepsDone,
   onToggleStep,
   onClearProgress,
+  timers,
 }: CookSectionProps) {
   const totalIngredients = sections.reduce((sum, s) => sum + s.ingredients.length, 0)
   const progressTotal = totalIngredients + steps.length
@@ -628,26 +638,44 @@ function CookSection({
           <ol className="flex flex-col gap-2.5">
             {steps.map((step, idx) => {
               const done = stepsDone.has(idx)
+              const durations = stepDurations[idx] ?? []
               return (
                 <li key={idx}>
-                  <button
-                    type="button"
-                    onClick={() => onToggleStep(idx)}
-                    className="w-full bg-surface rounded-group shadow-card border border-hair text-left p-4 flex gap-3.5 transition-all"
-                  >
-                    <span
-                      className={clsx(
-                        'flex-none w-[30px] h-[30px] rounded-full grid place-items-center text-[14px] font-semibold font-serif transition-colors',
-                        done ? 'bg-clay text-white' : 'bg-clay-tint text-clay-deep'
-                      )}
-                      aria-hidden
+                  <div className="bg-surface rounded-group shadow-card border border-hair overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => onToggleStep(idx)}
+                      className="w-full text-left p-4 flex gap-3.5 active:bg-surface-2 transition-colors"
                     >
-                      {done ? <Check size={15} /> : idx + 1}
-                    </span>
-                    <p className={clsx('text-[15.5px] leading-relaxed pt-1', done ? 'text-ink-4' : 'text-ink')}>
-                      {step}
-                    </p>
-                  </button>
+                      <span
+                        className={clsx(
+                          'flex-none w-[30px] h-[30px] rounded-full grid place-items-center text-[14px] font-semibold font-serif transition-colors',
+                          done ? 'bg-clay text-white' : 'bg-clay-tint text-clay-deep'
+                        )}
+                        aria-hidden
+                      >
+                        {done ? <Check size={15} /> : idx + 1}
+                      </span>
+                      <p className={clsx('text-[15.5px] leading-relaxed pt-1', done ? 'text-ink-4' : 'text-ink')}>
+                        {step}
+                      </p>
+                    </button>
+                    {durations.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pl-[60px] pr-4 pb-3.5">
+                        {durations.map(duration => {
+                          const key = `${idx}:${duration.seconds}`
+                          return (
+                            <TimerChip
+                              key={key}
+                              duration={duration}
+                              state={timers.get(key)}
+                              onToggle={() => timers.toggle(key, duration.seconds)}
+                            />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </li>
               )
             })}
@@ -661,5 +689,46 @@ function CookSection({
         </section>
       )}
     </>
+  )
+}
+
+// One tap starts the countdown, the next cancels it — and a finished timer taps
+// back to its idle label, so the chip never needs a second control.
+function TimerChip({
+  duration,
+  state,
+  onToggle,
+}: {
+  duration: StepDuration
+  state: TimerState | null
+  onToggle: () => void
+}) {
+  const done = state?.done ?? false
+  const label = done ? 'Klart!' : state ? formatRemaining(state.remaining) : duration.label
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={
+        done
+          ? `Timer klar för ${duration.label}`
+          : state
+            ? `Stoppa timern för ${duration.label}`
+            : `Starta timer på ${duration.label}`
+      }
+      className={clsx(
+        'inline-flex items-center gap-1.5 px-[11px] py-[6px] rounded-full text-[13px] font-medium border transition-colors',
+        state && 'tabular-nums',
+        done
+          ? 'bg-clay text-white border-clay'
+          : state
+            ? 'bg-clay-tint text-clay-deep border-clay-line'
+            : 'bg-surface-2 text-ink-2 border-hair hover:text-clay-deep hover:border-clay-line'
+      )}
+    >
+      {done ? <Check size={13} /> : state ? <X size={13} /> : <Clock size={14} />}
+      {label}
+    </button>
   )
 }
