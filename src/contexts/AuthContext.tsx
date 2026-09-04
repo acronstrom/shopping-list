@@ -16,13 +16,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [householdId, setHouseholdId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const [isHouseholdLoading, setIsHouseholdLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      setIsLoading(false)
+      setIsSessionLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -34,19 +35,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Keyed on the id, not the user object: a token refresh hands us a fresh
+  // object for the same person and must not re-run the lookup.
+  const userId = user?.id ?? null
+
   useEffect(() => {
-    if (!user) return
+    if (!userId) {
+      setIsHouseholdLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setIsHouseholdLoading(true)
+
     supabase
       .from('household_members')
       .select('household_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('status', 'accepted')
-      .maybeSingle()
-      .then(({ data }) => {
-        const row = data as { household_id: string } | null
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) console.error('[AuthContext] household lookup failed', error)
+        const row = (data ?? [])[0] as { household_id: string } | undefined
         setHouseholdId(row?.household_id ?? null)
+        setIsHouseholdLoading(false)
       })
-  }, [user])
+
+    return () => { cancelled = true }
+  }, [userId])
+
+  // Stay on the spinner until we know whether a signed-in user has a household.
+  // Releasing earlier renders HouseholdSetup for a frame on every cold start.
+  const isLoading = isSessionLoading || (!!userId && isHouseholdLoading)
 
   return (
     <AuthContext.Provider value={{ user, session, householdId, isLoading, setHouseholdId }}>
