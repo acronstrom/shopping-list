@@ -35,25 +35,34 @@ export function AuthPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-paper flex flex-col">
+    <div className="min-h-dvh bg-paper">
+     <div className="mx-auto w-full max-w-md min-h-dvh flex flex-col lg:max-w-none lg:grid lg:grid-cols-2">
       {/* Hero */}
-      <div className="relative mx-4 mt-4 rounded-card overflow-hidden h-[300px] bg-gradient-to-br from-clay to-clay-deep">
+      <div className="relative mx-4 mt-4 rounded-card overflow-hidden h-[200px] bg-gradient-to-br from-clay to-clay-deep lg:m-5 lg:h-auto">
         <div className="absolute inset-0 bg-gradient-to-b from-ink/20 via-transparent to-ink/45" />
-        <div className="absolute left-[22px] top-5 flex items-center gap-2.5 text-white">
+        <div className="hidden lg:block absolute -right-24 -top-24 w-80 h-80 rounded-full bg-white/10" />
+        <div className="hidden lg:block absolute -left-16 top-1/3 w-56 h-56 rounded-full bg-white/[0.06]" />
+        <div className="absolute left-[22px] top-5 lg:left-10 lg:top-9 flex items-center gap-2.5 text-white">
           <span className="w-[30px] h-[30px] rounded-[9px] bg-white/15 grid place-items-center">
             <Leaf size={18} />
           </span>
-          <span className="font-semibold text-[16px] tracking-[-0.01em]">Inköpslista</span>
         </div>
-        <div className="absolute left-[22px] right-[22px] bottom-5 text-white">
-          <div className="font-serif text-[34px] font-medium leading-[1.02] tracking-[-0.02em]">
+        <div className="absolute left-[22px] right-[22px] bottom-5 text-white lg:left-10 lg:right-10 lg:bottom-12">
+          <div className="font-serif text-[34px] font-medium leading-[1.02] tracking-[-0.02em] lg:text-[60px]">
             Vad blir det<br />för mat?
           </div>
+          <p className="hidden lg:block mt-4 max-w-sm text-[17px] leading-relaxed text-white/85">
+            Planera veckan, samla recepten och handla tillsammans – listan är alltid i synk.
+          </p>
         </div>
       </div>
 
-      <div className="px-6 pt-5">
-        <p className="text-[15px] text-ink-3 leading-relaxed mb-5">
+      <div className="px-6 pt-5 pb-8 lg:flex lg:flex-col lg:justify-center lg:px-16 lg:py-10">
+       <div className="w-full lg:max-w-sm lg:mx-auto">
+        <h1 className="hidden lg:block font-serif text-[34px] font-medium tracking-[-0.02em] text-ink leading-tight mb-2">
+          {mode === 'signin' ? 'Välkommen tillbaka' : 'Skapa ditt konto'}
+        </h1>
+        <p className="text-[15px] text-ink-3 leading-relaxed mb-5 lg:mb-7">
           En delad inköpslista och receptbok för hela hushållet.
         </p>
 
@@ -101,7 +110,9 @@ export function AuthPage() {
             {mode === 'signin' ? 'Logga in' : 'Skapa konto'}
           </Button>
         </form>
+       </div>
       </div>
+     </div>
     </div>
   )
 }

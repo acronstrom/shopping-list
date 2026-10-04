@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Inköpslista',
-        short_name: 'Inköpslista',
+        name: 'Vad blir det för mat?',
+        short_name: 'Vad blir det?',
         description: 'Delad inköpslista för hushållet med AI-kategorisering',
         theme_color: '#c06534',
         background_color: '#fcf9f5',

@@ -6,7 +6,7 @@ This document walks you through the codebase step by step so you can be producti
 
 ## 1. What this project is
 
-**Inköpslista** ("Shopping list" in Swedish) — a PWA-installable shared grocery list and recipe book for a household. Multiple household members log in, see the same live list, check items off in-store, and save recipes that can be pushed onto the list. New items are auto-categorized by an OpenAI-backed edge function so they appear under the right aisle. Categories and aisle ordering are modeled on a Swedish **ICA Maxi** store layout.
+**Vad blir det för mat?** ("What's for dinner?" in Swedish; formerly "Inköpslista") — a PWA-installable shared grocery list and recipe book for a household. Multiple household members log in, see the same live list, check items off in-store, and save recipes that can be pushed onto the list. New items are auto-categorized by an OpenAI-backed edge function so they appear under the right aisle. Categories and aisle ordering are modeled on a Swedish **ICA Maxi** store layout.
 
 **The UI is Swedish.** All visible strings, category names, button labels, and DB-stored category values are Swedish. Do not introduce English UI text or a translation layer (the previous one was deliberately removed — see [src/lib/constants.ts](src/lib/constants.ts) for the canonical category list).
 

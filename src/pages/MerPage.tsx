@@ -39,7 +39,7 @@ export function MerPage() {
           <span className="w-7 h-7 rounded-[9px] bg-clay grid place-items-center text-white flex-none">
             <Leaf size={16} />
           </span>
-          <span className="text-[13px]">Inköpslista — delad lista &amp; receptbok</span>
+          <span className="text-[13px]">Vad blir det för mat? — delad lista &amp; receptbok</span>
         </div>
       </div>
     </div>

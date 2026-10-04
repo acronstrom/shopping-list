@@ -13,7 +13,7 @@ export function Sidebar() {
         <span className="w-8 h-8 rounded-[10px] bg-clay grid place-items-center text-white flex-none">
           <Leaf size={18} />
         </span>
-        <span className="font-serif text-[20px] font-medium tracking-[-0.01em] text-ink">Inköpslista</span>
+        <span className="font-serif text-[18px] leading-tight font-medium tracking-[-0.01em] text-ink">Vad blir det för mat?</span>
       </div>
       <nav className="flex flex-col gap-1">
         {TABS.map(({ to, label, Icon, isActive }) => {
